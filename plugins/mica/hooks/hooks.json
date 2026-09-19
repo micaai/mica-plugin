@@ -1,0 +1,17 @@
+{
+  "description": "After an Edit or Write, snapshot any tracked skill installation and ask the agent to record intent.",
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node ${CLAUDE_PLUGIN_ROOT}/hooks/post-tool-use.mjs",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}

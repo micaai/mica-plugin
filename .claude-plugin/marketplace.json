@@ -1,0 +1,14 @@
+{
+  "name": "mica-plugin",
+  "owner": {
+    "name": "Mica"
+  },
+  "description": "Marketplace for the Mica personalization plugin.",
+  "plugins": [
+    {
+      "name": "mica",
+      "source": "./plugins/mica",
+      "description": "Personalization layer for shared agent skills: snapshot local edits, update from the trunk, and contribute changes back to the owner."
+    }
+  ]
+}
