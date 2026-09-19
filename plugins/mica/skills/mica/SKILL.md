@@ -1,10 +1,12 @@
 ---
 name: mica
 description: Use when editing, personalizing, installing, sharing, updating, or contributing changes to Claude Code agent skills — for example when the user edits a skill under ~/.claude/skills, asks to install or update a skill, or wants to share a skill improvement with its owner. Snapshots skill edits and manages updates and contributions through the mica CLI.
-allowed-tools: Bash(mica *)
+allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/mica.cjs *)
 ---
 
 # Mica
+
+Run every command as `node ${CLAUDE_SKILL_DIR}/scripts/mica.cjs <command>`.
 
 Mica tracks a skill's installation against its trunk on the server. It
 snapshots local edits, merges upstream updates, and offers contributions back
@@ -18,7 +20,7 @@ After ANY edit to a file under a tracked skill directory
 (`~/.claude/skills/<name>` or `$CLAUDE_CONFIG_DIR/skills/<name>`), run:
 
 ```
-mica snapshot --intent "<goal>"
+node ${CLAUDE_SKILL_DIR}/scripts/mica.cjs snapshot --intent "<goal>"
 ```
 
 Every mica command snapshots all installations first, so running any
@@ -37,12 +39,12 @@ snapshots rather than bundling them into one intent.
 
 ## Publish vs contribute
 
-- `mica publish <path>` is owner-only: it creates a skill's trunk or
+- `node ${CLAUDE_SKILL_DIR}/scripts/mica.cjs publish <path>` is owner-only: it creates a skill's trunk or
   advances its head directly for everyone who uses it.
-- `mica contribute` offers selected intent records from your
+- `node ${CLAUDE_SKILL_DIR}/scripts/mica.cjs contribute` offers selected intent records from your
   personalization to the skill's owner for review.
 
-Decide by fact, not by guess. `mica status` marks every installation the
+Decide by fact, not by guess. `node ${CLAUDE_SKILL_DIR}/scripts/mica.cjs status` marks every installation the
 user owns with `(owner)`. Owned → `publish`. Not owned → `contribute`.
 
 Do NOT ask the user whether they own the skill, and do NOT infer ownership
@@ -54,18 +56,18 @@ If `publish` returns `not_owner`, run `contribute` instead.
 
 ## Contributing all or some intents
 
-`mica contribute <skill>` with no flags is list mode: it returns the
+`node ${CLAUDE_SKILL_DIR}/scripts/mica.cjs contribute <skill>` with no flags is list mode: it returns the
 contributable `intents` (each with an `id` and its intent text) and the
 `unattributed` delta (edits not covered by any intent). It submits nothing.
 
 Choose the flags from what the user asked for:
 
 - "Share all my improvements" →
-  `mica contribute <skill> --all`
+  `node ${CLAUDE_SKILL_DIR}/scripts/mica.cjs contribute <skill> --all`
   (every listed intent plus the unattributed delta).
 - "Share only my X change" → first run list mode, match the intent text to
   the user's request, then
-  `mica contribute <skill> --intents <id>[,<id>...]`
+  `node ${CLAUDE_SKILL_DIR}/scripts/mica.cjs contribute <skill> --intents <id>[,<id>...]`
   (comma- or space-separated). Add `--unattributed` to also include the
   edits that have no intent. If the match is unclear, relay the list to
   the user and ask which intents to submit.
@@ -86,7 +88,7 @@ Commands may return `questions` — server-held pending questions, each with a
    only the question line and the options. In an adoption diff, `+`
    lines are the user's local copy and `-` lines are the tracked
    revision.
-2. Run `mica answer <question_id> --choice <option_id>` with the user's
+2. Run `node ${CLAUDE_SKILL_DIR}/scripts/mica.cjs answer <question_id> --choice <option_id>` with the user's
    choice.
 
 Pending questions survive interruption: an unanswered question reappears on
@@ -94,12 +96,12 @@ the next command until it is answered.
 
 ## Other commands
 
-- `mica install <skill>` — create an installation of a skill from its
+- `node ${CLAUDE_SKILL_DIR}/scripts/mica.cjs install <skill>` — create an installation of a skill from its
   trunk.
-- `mica update [<skill>]` — merge the trunk's latest revision into an
+- `node ${CLAUDE_SKILL_DIR}/scripts/mica.cjs update [<skill>]` — merge the trunk's latest revision into an
   installation, preserving personalization.
-- `mica status` — show tracked skills, drift, and which skills the user
+- `node ${CLAUDE_SKILL_DIR}/scripts/mica.cjs status` — show tracked skills, drift, and which skills the user
   owns (`(owner)`).
-- `mica revert [--to <snapshot>]` — restore an installation to its
+- `node ${CLAUDE_SKILL_DIR}/scripts/mica.cjs revert [--to <snapshot>]` — restore an installation to its
   baseline; `--to <snapshot>` reaches a prior snapshot.
-- `mica login [--local]` — authenticate with the Mica server.
+- `node ${CLAUDE_SKILL_DIR}/scripts/mica.cjs login [--local]` — authenticate with the Mica server.

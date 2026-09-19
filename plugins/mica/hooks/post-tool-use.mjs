@@ -48,7 +48,9 @@ async function main() {
   const pluginRoot = process.env.CLAUDE_PLUGIN_ROOT;
   if (typeof pluginRoot !== "string" || pluginRoot.length === 0) return;
 
-  const child = spawn(process.execPath, [join(pluginRoot, "bin", "mica"), "snapshot"], {
+  const scriptPath = join(pluginRoot, "skills", "mica", "scripts", "mica.cjs");
+
+  const child = spawn(process.execPath, [scriptPath, "snapshot"], {
     detached: true,
     stdio: "ignore",
   });
@@ -56,7 +58,7 @@ async function main() {
 
   const additionalContext =
     "You just edited a Mica-tracked skill, and a background safety-net snapshot was already taken. " +
-    'Now run `mica snapshot --intent "<goal>"` with a one-line statement of the goal behind this edit.';
+    `Now run \`node ${scriptPath} snapshot --intent "<goal>"\` with a one-line statement of the goal behind this edit.`;
 
   process.stdout.write(
     `${JSON.stringify({
