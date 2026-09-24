@@ -77,6 +77,47 @@ usual. If a subset returns `hunks_do_not_apply`, an unselected intent
 changed the same lines: select the related intents together, or use
 `--all`.
 
+## Connecting to Mica
+
+When the user asks to connect Mica, or a command reports that the user is not
+logged in, run `login`. Login spans more than one command: one command starts
+it, and a later command finishes it with the code the browser shows. The CLI
+never polls and never learns the code by itself.
+
+Run login with `--json` and read `result.status`:
+
+- `email_required` — ask the user which email address to connect, then run
+  `node ${CLAUDE_SKILL_DIR}/scripts/mica.cjs login --json --email <email>`.
+- `code_required` — present `result.verification_uri` as a clickable
+  **Connect Mica** link, and ask the user to open it and send back the code
+  the page shows. Then run
+  `node ${CLAUDE_SKILL_DIR}/scripts/mica.cjs login --json --code <code>`.
+- `logged_in` — tell the user which email `result.email` names, then continue
+  with the command the user originally asked for.
+
+Rules:
+
+- Ask in plain words. Do not show the user a shell command, and do not ask
+  the user to run one.
+- Pass `--email` or `--code`, never both in the same command.
+- Pass `--code` only after a `code_required` status. `--code` alone fails
+  when no login is waiting for a code.
+- Run `login --json` with no other flag to see where a login stands: it
+  repeats the saved link, or reports the logged-in email.
+- A `code_required` status with `result.retry_reason` means the code was
+  rejected or is not confirmed yet. The login is still good: ask the user for
+  the code again, against the same link, and run `--code` again. Do not
+  restart with `--email`.
+- Restart with `--email <email>` only when the link itself is dead or
+  expired. That starts a new login and returns a new link.
+- `say_to_user` is already worded for the user in every case — a first
+  prompt, a resume, an unconfirmed code, and a rejected code each get their
+  own sentence. Relay it as it stands.
+- Add `--local` to keep credentials in `./.mica` instead of `~/.mica`. Use it
+  when a wrapper or a session brief tells you to.
+- Never print, repeat, or read out a token, an assertion, or the contents of
+  a file under `.mica/`. Relay only the link, the status, and the email.
+
 ## Handling pending questions
 
 Commands may return `questions` — server-held pending questions, each with a
@@ -104,4 +145,5 @@ the next command until it is answered.
   owns (`(owner)`).
 - `node ${CLAUDE_SKILL_DIR}/scripts/mica.cjs revert [--to <snapshot>]` — restore an installation to its
   baseline; `--to <snapshot>` reaches a prior snapshot.
-- `node ${CLAUDE_SKILL_DIR}/scripts/mica.cjs login [--local]` — authenticate with the Mica server.
+- `node ${CLAUDE_SKILL_DIR}/scripts/mica.cjs login [--local] [--email <email>] [--code <code>]` —
+  authenticate with the Mica server; see [Connecting to Mica](#connecting-to-mica).
