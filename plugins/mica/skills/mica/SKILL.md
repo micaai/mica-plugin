@@ -28,9 +28,11 @@ For **each Cowork invocation**:
    path. Use `<selected mounted folder>/.mica/cli/<current-source-sha256>/mica.cjs`
    as the device CLI path.
 3. On a cache miss, call `device_list_dir` on the selected mounted folder;
-   use its absolute host `resolvedPath` **only** for the transfer destination.
-   In `device_bash`, run `umask 077; mkdir -p -- "$FOLDER/.mica/cli/$SHA"`
-   with `FOLDER` and `SHA` set as in step 5. In cloud `Bash`, run `umask 077`,
+   use its absolute host `resolvedPath` for the transfer destination, never
+   as a device CLI path. The delete policy below also uses `resolvedPath`,
+   including on cache hits. In `device_bash`, run
+   `umask 077; mkdir -p -- "$FOLDER/.mica/cli/$SHA"` with `FOLDER` and `SHA`
+   set as in step 5. In cloud `Bash`, run `umask 077`,
    copy the **file bytes** from the rendered source to
    `/mnt/user-data/outputs/mica-<current-source-sha256>.cjs`, and check
    that the staged file's SHA-256 matches the current source digest. Call
@@ -40,11 +42,11 @@ For **each Cowork invocation**:
    copy.
 4. In `device_bash`, set the device CLI file's mode to `0600`. If a cache
    file is corrupt or unreadable, do not run it or assume the transfer can
-   overwrite it. With normal permission approval, remove **only** that exact
-   file via `rm -f -- "$CLI"` in `device_bash`. If removal fails or permission
-   is denied, stop. Then repeat the cache-miss transfer in step 3, including
-   `device_list_dir`, and check the new file. Never remove credentials or
-   use an older cache.
+   overwrite it. After user approval under the Cowork delete policy below,
+   remove **only** that exact file via `rm -f -- "$CLI"` in `device_bash`.
+   If removal fails or permission is denied, stop. Then repeat the cache-miss
+   transfer in step 3, including `device_list_dir`, and check the new file.
+   Never remove credentials or use an older cache.
 5. In **the same `device_bash` shell command**, check the current cloud
    digest against the device file before running the CLI. Run it with cwd
    and `CLAUDE_CONFIG_DIR` set to the selected mounted folder:
@@ -69,6 +71,42 @@ For **each Cowork invocation**:
    the CLI writes them with mode `0600`. Never print credentials, tokens,
    proxy values, or bundle bytes.
 
+### Cowork delete permission
+
+Run ordinary commands without asking for delete permission. In particular,
+run `status` with a valid access token without a permission request. A token
+refresh can need deletion: Mica uses a credential lock that it must remove
+when it finishes. Only if the CLI returns
+`EPERM: operation not permitted, rmdir '<selected mount>/.mica/credentials.json.lock'`,
+explain this lock cleanup to the user. Say that the permission applies to
+**the entire selected connected folder, including `.mica`, for the rest of
+this session**, not only to the lock. Ask the user to approve that scope.
+Never manually delete the credential lock or inspect credentials.
+
+If the user approves, call `device_list_dir` on the **currently selected
+mounted folder**, even on a CLI cache hit, and take its exact host
+`resolvedPath`. Check that it names that folder's root, not its parent,
+a subfolder, or another connected folder. Call
+`device_request_delete_permission({paths:[resolvedPath],reason:"Allow Mica to remove its credential lock during token refresh and files removed by approved Mica operations; permission covers the entire selected connected folder, including .mica, for the rest of this session."})`.
+Check that the tool response grants deletion for **exactly that root** in
+this session; otherwise stop. Retry the **same complete step 5 command**,
+including its same-shell hash guard, cwd, environment and arguments, **once**.
+If the user declines, the tool is unavailable, the path or grant is broader,
+the `EPERM` names another path or operation, or the retry fails, stop.
+Do not save a permission marker for later sessions. A verified grant in this
+session remains valid until the session ends.
+
+Before a command **known to remove files**, explain its deletion and ask for
+the same exact-root, session-scoped grant, using `device_list_dir` and the
+permission request above **before running it**. This includes final
+`login --code` (removes `.mica/pending-login.json`), `revert`, `uninstall`,
+and `update`, `restore`, or `answer` flows that can remove tracked files.
+If the user declines or the exact-root grant fails, do not run the operation.
+Do not classify every command as destructive; do not request a grant just
+because a new session started. During permission handling, do not read or
+print credential file contents, access or refresh tokens, assertions, or proxy
+credentials. Ordinary skill content and diffs can be read and shown.
+
 Mica tracks a skill's installation against its trunk on the server. It
 snapshots local edits, merges upstream updates, and offers contributions back
 to a skill's owner. This skill covers the same workflow the PostToolUse hook
@@ -83,8 +121,8 @@ After ANY edit to a file under a tracked skill directory
 through the runner. In Cowork, `$CLAUDE_CONFIG_DIR` is the selected connected
 folder; snapshot after each edit because a hook may not run there.
 
-Every mica command snapshots all installations first, so running any
-command is always safe. When in doubt, snapshot.
+Every Mica command snapshots all installations first. This does not bypass
+the Cowork delete policy. When in doubt, snapshot.
 
 ## How to phrase `--intent`
 
