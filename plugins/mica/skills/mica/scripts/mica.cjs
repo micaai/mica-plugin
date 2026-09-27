@@ -45685,10 +45685,10 @@ async function runLogin(options = {}) {
   }
   const pending = await readPending(options);
   if (options.code !== void 0) {
-    if (!pending) {
+    if (pending) return await completeRegistration(pending, options.code, options);
+    if (!await readCredentials(credentialPaths(options))) {
       throw new Error("No login is waiting for a code. Start again with --email <email>.");
     }
-    return await completeRegistration(pending, options.code, options);
   }
   if (pending) {
     return { status: "code_required", verification_uri: pending.verification_uri };
@@ -45716,7 +45716,7 @@ async function completeRegistration(pending, code, options) {
         retry_reason: code2
       };
     }
-    await (0, import_promises3.rm)(pendingPath(options), { force: true });
+    await clearPending(options);
     throw registrationError(body, "Could not complete login; start again with --email <email>");
   }
   const assertion = body.identity?.assertion;
@@ -45733,7 +45733,7 @@ async function completeRegistration(pending, code, options) {
     },
     scopedPaths(options)
   );
-  await (0, import_promises3.rm)(pendingPath(options), { force: true });
+  await clearPending(options);
   await getAccessToken({ ...credentialPaths(options), ...authkitOption(options) });
   return { status: "logged_in", email: pending.email };
 }
@@ -45813,6 +45813,10 @@ async function readPending(options) {
   } catch {
     return void 0;
   }
+}
+async function clearPending(options) {
+  const path2 = pendingPath(options);
+  await (0, import_promises3.rm)(path2, { force: true }).catch(() => (0, import_promises3.writeFile)(path2, ""));
 }
 async function writePending(pending, options) {
   const path2 = pendingPath(options);

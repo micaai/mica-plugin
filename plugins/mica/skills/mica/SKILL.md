@@ -108,9 +108,9 @@ session remains valid until the session ends.
 
 Before a command **known to remove files**, explain its deletion and ask for
 the same exact-root, session-scoped grant, using `device_list_dir` and the
-permission request above **before running it**. This includes final
-`login --code` (removes `.mica/pending-login.json`), `revert`, `uninstall`,
-and `update`, `restore`, or `answer` flows that can remove tracked files.
+permission request above **before running it**. This includes `revert`,
+`uninstall`, and `update`, `restore`, or `answer` flows that can remove
+tracked files.
 If the user declines or the exact-root grant fails, do not run the operation.
 Do not classify every command as destructive; do not request a grant just
 because a new session started. During permission handling, do not read or
