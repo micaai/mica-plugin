@@ -45880,27 +45880,29 @@ var import_node_path5 = require("node:path");
 var import_promises4 = require("node:fs/promises");
 var import_node_path4 = require("node:path");
 async function collectManifest(root) {
-  const entries = await (0, import_promises4.readdir)(root, { recursive: true, withFileTypes: true });
   const inputs = [];
   const skippedSymlinks = [];
-  for (const entry of entries) {
-    if (entry.name === "node_modules" || entry.name === ".git")
-      continue;
-    const absolute = (0, import_node_path4.join)(entry.parentPath, entry.name);
-    const path2 = (0, import_node_path4.relative)(root, absolute).split(import_node_path4.sep).join("/");
-    const stats = await (0, import_promises4.lstat)(absolute);
-    if (stats.isSymbolicLink()) {
-      skippedSymlinks.push(path2);
-      continue;
+  async function walk(dir) {
+    for (const entry of await (0, import_promises4.readdir)(dir, { withFileTypes: true })) {
+      if (entry.name === "node_modules" || entry.name === ".git")
+        continue;
+      const absolute = (0, import_node_path4.join)(dir, entry.name);
+      const path2 = (0, import_node_path4.relative)(root, absolute).split(import_node_path4.sep).join("/");
+      if (entry.isSymbolicLink())
+        skippedSymlinks.push(path2);
+      else if (entry.isDirectory())
+        await walk(absolute);
+      else if (entry.isFile()) {
+        const stats = await (0, import_promises4.lstat)(absolute);
+        inputs.push({
+          path: path2,
+          content_hash: contentHash(await (0, import_promises4.readFile)(absolute)),
+          executable: (stats.mode & 73) !== 0
+        });
+      }
     }
-    if (!stats.isFile())
-      continue;
-    inputs.push({
-      path: path2,
-      content_hash: contentHash(await (0, import_promises4.readFile)(absolute)),
-      executable: (stats.mode & 73) !== 0
-    });
   }
+  await walk(root);
   return { manifest: buildManifest(inputs), skippedSymlinks };
 }
 
