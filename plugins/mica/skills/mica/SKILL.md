@@ -26,11 +26,13 @@ For **each Cowork invocation**:
    folders. If there are none, ask the user to connect one. If there are
    several, ask which one to use. Do not select one from a prior session's
    path. Use `<selected mounted folder>/.mica/cli/<current-source-sha256>/mica.cjs`
-   as the device CLI path.
-3. On a cache miss, call `device_list_dir` on the selected mounted folder;
-   use its absolute host `resolvedPath` for the transfer destination, never
-   as a device CLI path. The delete policy below also uses `resolvedPath`,
-   including on cache hits. In `device_bash`, run
+   as the device CLI path. Then call `device_list_dir` on the selected
+   mounted folder, **also on a cache hit**, and record its absolute host
+   `resolvedPath` for this invocation. Never take it from a prior session,
+   from `ls`, or from a `/sessions/...` path.
+3. On a cache miss, use the `resolvedPath` from step 2 for the transfer
+   destination, never as a device CLI path. The delete policy below also
+   uses `resolvedPath`. In `device_bash`, run
    `umask 077; mkdir -p -- "$FOLDER/.mica/cli/$SHA"` with `FOLDER` and `SHA`
    set as in step 5. In cloud `Bash`, run `umask 077`,
    copy the **file bytes** from the rendered source to
@@ -60,16 +62,24 @@ For **each Cowork invocation**:
      exit 1
    }
    cd "$FOLDER" || exit 1
-   CLAUDE_CONFIG_DIR="$FOLDER" node "$CLI" <args>
+   CLAUDE_CONFIG_DIR="$FOLDER" node "$CLI" <args> --connected-folder "<resolvedPath>"
    ```
 
-   Replace the folder name, 64-character digest, and arguments with the
-   values selected **for this invocation**. If the guard fails, use step 4;
-   never run `node` without it. For example, replace `<args>` with `status`
+   Replace the folder name, 64-character digest, `resolvedPath`, and
+   arguments with the values selected **for this invocation**. Always add
+   `--connected-folder` in Cowork: Mica then records installation paths
+   against the persistent host folder, not against this session's mount.
+   If the guard fails, use step 4; never run `node` without it. For example, replace `<args>` with `status`
    to run `status`. For every Cowork `login`, include `--local` (for example,
    `login --local --json`) so credentials persist under the connected folder;
    the CLI writes them with mode `0600`. Never print credentials, tokens,
    proxy values, or bundle bytes.
+
+If `status` reports that a skill is recorded outside the selected connected
+folder (`install_path` is `null`; `recorded_path` names an old session path
+or another folder), tell the user. If its directory is in this folder,
+usually `skills/<skill>`, and the user agrees, run `relink <skill> skills/<skill>`
+once. Never relink to a directory in another connected folder.
 
 ### Cowork delete permission
 

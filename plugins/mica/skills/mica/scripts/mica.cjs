@@ -2733,9 +2733,9 @@ var require_dispatcher_base = __commonJS({
       }
       close(callback) {
         if (callback === void 0) {
-          return new Promise((resolve4, reject) => {
+          return new Promise((resolve5, reject) => {
             this.close((err, data) => {
-              return err ? reject(err) : resolve4(data);
+              return err ? reject(err) : resolve5(data);
             });
           });
         }
@@ -2773,9 +2773,9 @@ var require_dispatcher_base = __commonJS({
           err = null;
         }
         if (callback === void 0) {
-          return new Promise((resolve4, reject) => {
+          return new Promise((resolve5, reject) => {
             this.destroy(err, (err2, data) => {
-              return err2 ? reject(err2) : resolve4(data);
+              return err2 ? reject(err2) : resolve5(data);
             });
           });
         }
@@ -6272,8 +6272,8 @@ var require_promise = __commonJS({
     function createDeferredPromise() {
       let res;
       let rej;
-      const promise2 = new Promise((resolve4, reject) => {
-        res = resolve4;
+      const promise2 = new Promise((resolve5, reject) => {
+        res = resolve5;
         rej = reject;
       });
       return { promise: promise2, resolve: res, reject: rej };
@@ -7676,12 +7676,12 @@ upgrade: ${upgrade}\r
           cb();
         }
       }
-      const waitForDrain = () => new Promise((resolve4, reject) => {
+      const waitForDrain = () => new Promise((resolve5, reject) => {
         assert2(callback === null);
         if (socket[kError]) {
           reject(socket[kError]);
         } else {
-          callback = resolve4;
+          callback = resolve5;
         }
       });
       socket.on("close", onDrain).on("drain", onDrain);
@@ -8557,12 +8557,12 @@ var require_client_h2 = __commonJS({
           cb();
         }
       }
-      const waitForDrain = () => new Promise((resolve4, reject) => {
+      const waitForDrain = () => new Promise((resolve5, reject) => {
         assert2(callback === null);
         if (socket[kError]) {
           reject(socket[kError]);
         } else {
-          callback = resolve4;
+          callback = resolve5;
         }
       });
       h2stream.on("close", onDrain).on("drain", onDrain);
@@ -8878,16 +8878,16 @@ var require_client = __commonJS({
         return this[kNeedDrain] < 2;
       }
       [kClose]() {
-        return new Promise((resolve4) => {
+        return new Promise((resolve5) => {
           if (this[kSize]) {
-            this[kClosedResolve] = resolve4;
+            this[kClosedResolve] = resolve5;
           } else {
-            resolve4(null);
+            resolve5(null);
           }
         });
       }
       [kDestroy](err) {
-        return new Promise((resolve4) => {
+        return new Promise((resolve5) => {
           const requests = this[kQueue].splice(this[kPendingIdx]);
           for (let i = 0; i < requests.length; i++) {
             const request = requests[i];
@@ -8900,7 +8900,7 @@ var require_client = __commonJS({
               this[kClosedResolve]();
               this[kClosedResolve] = null;
             }
-            resolve4(null);
+            resolve5(null);
           };
           if (this[kHTTPContext]) {
             this[kHTTPContext].destroy(err, callback);
@@ -9307,8 +9307,8 @@ var require_pool_base = __commonJS({
           }
           return Promise.all(closeAll);
         } else {
-          return new Promise((resolve4) => {
-            this[kClosedResolve] = resolve4;
+          return new Promise((resolve5) => {
+            this[kClosedResolve] = resolve5;
           });
         }
       }
@@ -10427,7 +10427,7 @@ var require_socks5_proxy_agent = __commonJS({
         const proxyHost = this[kProxyUrl].hostname;
         const proxyPort = parseInt(this[kProxyUrl].port) || 1080;
         debug("creating SOCKS5 connection to", proxyHost, proxyPort);
-        const socket = await new Promise((resolve4, reject) => {
+        const socket = await new Promise((resolve5, reject) => {
           this[kConnector]({
             hostname: proxyHost,
             host: proxyHost,
@@ -10437,7 +10437,7 @@ var require_socks5_proxy_agent = __commonJS({
             if (err) {
               reject(err);
             } else {
-              resolve4(socket2);
+              resolve5(socket2);
             }
           });
         });
@@ -10447,14 +10447,14 @@ var require_socks5_proxy_agent = __commonJS({
           socket.destroy();
         });
         await socks5Client.handshake();
-        await new Promise((resolve4, reject) => {
+        await new Promise((resolve5, reject) => {
           const timeout = setTimeout(() => {
             reject(new Error("SOCKS5 authentication timeout"));
           }, 5e3);
           const onAuthenticated = () => {
             clearTimeout(timeout);
             socks5Client.removeListener("error", onError);
-            resolve4();
+            resolve5();
           };
           const onError = (err) => {
             clearTimeout(timeout);
@@ -10463,14 +10463,14 @@ var require_socks5_proxy_agent = __commonJS({
           };
           if (socks5Client.state === STATES.AUTHENTICATED) {
             clearTimeout(timeout);
-            resolve4();
+            resolve5();
           } else {
             socks5Client.once("authenticated", onAuthenticated);
             socks5Client.once("error", onError);
           }
         });
         await socks5Client.connect(targetHost, targetPort);
-        await new Promise((resolve4, reject) => {
+        await new Promise((resolve5, reject) => {
           const timeout = setTimeout(() => {
             reject(new Error("SOCKS5 connection timeout"));
           }, 5e3);
@@ -10478,7 +10478,7 @@ var require_socks5_proxy_agent = __commonJS({
             debug("SOCKS5 tunnel established to", targetHost, targetPort, "via", info);
             clearTimeout(timeout);
             socks5Client.removeListener("error", onError);
-            resolve4();
+            resolve5();
           };
           const onError = (err) => {
             clearTimeout(timeout);
@@ -10521,8 +10521,8 @@ var require_socks5_proxy_agent = __commonJS({
                       socket,
                       servername: this[kRequestTls]?.servername || targetHost
                     });
-                    await new Promise((resolve4, reject) => {
-                      finalSocket.once("secureConnect", resolve4);
+                    await new Promise((resolve5, reject) => {
+                      finalSocket.once("secureConnect", resolve5);
                       finalSocket.once("error", reject);
                     });
                   }
@@ -11604,7 +11604,7 @@ var require_readable = __commonJS({
         if (this._readableState.closeEmitted) {
           return Promise.resolve(null);
         }
-        return new Promise((resolve4, reject) => {
+        return new Promise((resolve5, reject) => {
           if (this[kContentLength] && this[kContentLength] > limit || this[kBytesRead] > limit) {
             this.destroy(new AbortError());
           }
@@ -11618,11 +11618,11 @@ var require_readable = __commonJS({
               if (signal.aborted) {
                 reject(signal.reason ?? new AbortError());
               } else {
-                resolve4(null);
+                resolve5(null);
               }
             });
           } else {
-            this.on("close", resolve4);
+            this.on("close", resolve5);
           }
           this.on("error", noop).on("data", () => {
             if (this[kBytesRead] > limit) {
@@ -11650,7 +11650,7 @@ var require_readable = __commonJS({
     }
     function consume(stream, type) {
       assert2(!stream[kConsume]);
-      return new Promise((resolve4, reject) => {
+      return new Promise((resolve5, reject) => {
         if (isUnusable(stream)) {
           const rState = stream._readableState;
           if (rState.destroyed && rState.closeEmitted === false) {
@@ -11665,7 +11665,7 @@ var require_readable = __commonJS({
             stream[kConsume] = {
               type,
               stream,
-              resolve: resolve4,
+              resolve: resolve5,
               reject,
               length: 0,
               body: []
@@ -11739,18 +11739,18 @@ var require_readable = __commonJS({
       return buffer;
     }
     function consumeEnd(consume2, encoding) {
-      const { type, body, resolve: resolve4, stream, length } = consume2;
+      const { type, body, resolve: resolve5, stream, length } = consume2;
       try {
         if (type === "text") {
-          resolve4(chunksDecode(body, length, encoding));
+          resolve5(chunksDecode(body, length, encoding));
         } else if (type === "json") {
-          resolve4(JSON.parse(chunksDecode(body, length, encoding)));
+          resolve5(JSON.parse(chunksDecode(body, length, encoding)));
         } else if (type === "arrayBuffer") {
-          resolve4(chunksConcat(body, length).buffer);
+          resolve5(chunksConcat(body, length).buffer);
         } else if (type === "blob") {
-          resolve4(new Blob(body, { type: stream[kContentType] }));
+          resolve5(new Blob(body, { type: stream[kContentType] }));
         } else if (type === "bytes") {
-          resolve4(chunksConcat(body, length));
+          resolve5(chunksConcat(body, length));
         }
         consumeFinish(consume2);
       } catch (err) {
@@ -11940,9 +11940,9 @@ var require_api_request = __commonJS({
     };
     function request(opts, callback) {
       if (callback === void 0) {
-        return new Promise((resolve4, reject) => {
+        return new Promise((resolve5, reject) => {
           request.call(this, opts, (err, data) => {
-            return err ? reject(err) : resolve4(data);
+            return err ? reject(err) : resolve5(data);
           });
         });
       }
@@ -12154,9 +12154,9 @@ var require_api_stream = __commonJS({
     };
     function stream(opts, factory, callback) {
       if (callback === void 0) {
-        return new Promise((resolve4, reject) => {
+        return new Promise((resolve5, reject) => {
           stream.call(this, opts, factory, (err, data) => {
-            return err ? reject(err) : resolve4(data);
+            return err ? reject(err) : resolve5(data);
           });
         });
       }
@@ -12444,9 +12444,9 @@ var require_api_upgrade = __commonJS({
     };
     function upgrade(opts, callback) {
       if (callback === void 0) {
-        return new Promise((resolve4, reject) => {
+        return new Promise((resolve5, reject) => {
           upgrade.call(this, opts, (err, data) => {
-            return err ? reject(err) : resolve4(data);
+            return err ? reject(err) : resolve5(data);
           });
         });
       }
@@ -12539,9 +12539,9 @@ var require_api_connect = __commonJS({
     };
     function connect(opts, callback) {
       if (callback === void 0) {
-        return new Promise((resolve4, reject) => {
+        return new Promise((resolve5, reject) => {
           connect.call(this, opts, (err, data) => {
-            return err ? reject(err) : resolve4(data);
+            return err ? reject(err) : resolve5(data);
           });
         });
       }
@@ -13815,7 +13815,7 @@ var require_snapshot_recorder = __commonJS({
   "../../node_modules/.pnpm/undici@7.29.1/node_modules/undici/lib/mock/snapshot-recorder.js"(exports2, module2) {
     "use strict";
     var { writeFile: writeFile5, readFile: readFile6, mkdir: mkdir5 } = require("node:fs/promises");
-    var { dirname: dirname4, resolve: resolve4 } = require("node:path");
+    var { dirname: dirname4, resolve: resolve5 } = require("node:path");
     var { setTimeout: setTimeout2, clearTimeout: clearTimeout2 } = require("node:timers");
     var { InvalidArgumentError: InvalidArgumentError2, UndiciError } = require_errors();
     var { hashId, isUrlExcludedFactory, normalizeHeaders, createHeaderFilters } = require_snapshot_utils();
@@ -14016,7 +14016,7 @@ var require_snapshot_recorder = __commonJS({
           throw new InvalidArgumentError2("Snapshot path is required");
         }
         try {
-          const data = await readFile6(resolve4(path2), "utf8");
+          const data = await readFile6(resolve5(path2), "utf8");
           const parsed = JSON.parse(data);
           if (Array.isArray(parsed)) {
             this.#snapshots.clear();
@@ -14045,7 +14045,7 @@ var require_snapshot_recorder = __commonJS({
         if (!path2) {
           throw new InvalidArgumentError2("Snapshot path is required");
         }
-        const resolvedPath = resolve4(path2);
+        const resolvedPath = resolve5(path2);
         await mkdir5(dirname4(resolvedPath), { recursive: true });
         const data = Array.from(this.#snapshots.entries()).map(([hash2, snapshot]) => ({
           hash: hash2,
@@ -21471,7 +21471,7 @@ var require_fetch = __commonJS({
         const agent = fetchParams.controller.dispatcher;
         const path2 = url2.pathname + url2.search;
         const hasTrailingQuestionMark = url2.search.length === 0 && url2.href[url2.href.length - url2.hash.length - 1] === "?";
-        return new Promise((resolve4, reject) => agent.dispatch(
+        return new Promise((resolve5, reject) => agent.dispatch(
           {
             path: hasTrailingQuestionMark ? `${path2}?` : path2,
             origin: url2.origin,
@@ -21559,7 +21559,7 @@ var require_fetch = __commonJS({
                 }
               }
               const onError = this.onError.bind(this);
-              resolve4({
+              resolve5({
                 status,
                 statusText,
                 headersList,
@@ -21612,7 +21612,7 @@ var require_fetch = __commonJS({
                   headersList.append(headerName, String(value), true);
                 }
               }
-              resolve4({
+              resolve5({
                 status,
                 statusText: STATUS_CODES[status],
                 headersList,
@@ -21636,7 +21636,7 @@ var require_fetch = __commonJS({
                   headersList.append(nameStr, value.toString("latin1"), true);
                 }
               }
-              resolve4({
+              resolve5({
                 status,
                 statusText: STATUS_CODES[status],
                 headersList,
@@ -27382,12 +27382,12 @@ var require_adapter = __commonJS({
       return newFs;
     }
     function toPromise(method) {
-      return (...args) => new Promise((resolve4, reject) => {
+      return (...args) => new Promise((resolve5, reject) => {
         args.push((err, result) => {
           if (err) {
             reject(err);
           } else {
-            resolve4(result);
+            resolve5(result);
           }
         });
         method(...args);
@@ -45829,6 +45829,13 @@ var ApiError = class extends Error {
     this.body = body;
   }
 };
+function namedApiErrorMessage(error51) {
+  const body = error51.body !== null && typeof error51.body === "object" && !Array.isArray(error51.body) ? error51.body : void 0;
+  const code = typeof body?.error === "string" ? body.error : void 0;
+  if (code === void 0) return error51.message;
+  const detail = typeof body?.detail === "string" ? body.detail : void 0;
+  return detail !== void 0 ? `${code}: ${detail}` : code;
+}
 function createApiClient(options = {}) {
   const baseUrl = options.apiBaseUrl ?? process.env.MICA_API_URL ?? "https://app.usemica.com" ?? "http://localhost:3000";
   return {
@@ -45859,9 +45866,9 @@ function createApiClient(options = {}) {
 }
 
 // src/snapshot.ts
-var import_promises6 = require("node:fs/promises");
+var import_promises7 = require("node:fs/promises");
 
-// src/transfer.ts
+// src/files.ts
 var import_promises5 = require("node:fs/promises");
 var import_node_path5 = require("node:path");
 
@@ -45893,12 +45900,352 @@ async function collectManifest(root) {
   return { manifest: buildManifest(inputs), skippedSymlinks };
 }
 
+// src/files.ts
+function parseManifestEntry(value) {
+  if (!isRecord(value) || typeof value.path !== "string" || typeof value.content_hash !== "string" || !/^[0-9a-f]{64}$/.test(value.content_hash) || typeof value.executable !== "boolean") {
+    throw new Error("invalid manifest entry");
+  }
+  return {
+    path: value.path,
+    content_hash: value.content_hash,
+    executable: value.executable
+  };
+}
+function parseManifest(value) {
+  if (!Array.isArray(value)) throw new Error("invalid manifest");
+  return buildManifest(value.map(parseManifestEntry));
+}
+function parseReturnedFile(value) {
+  if (!isRecord(value) || typeof value.path !== "string" || typeof value.bytes_b64 !== "string" || typeof value.executable !== "boolean") {
+    throw new Error("invalid returned file");
+  }
+  if (!isCanonicalBase64(value.bytes_b64)) throw new Error("invalid base64 returned file");
+  return { path: value.path, bytes_b64: value.bytes_b64, executable: value.executable };
+}
+function parseReturnedFiles(value) {
+  if (!Array.isArray(value)) throw new Error("invalid returned files");
+  return value.map(parseReturnedFile);
+}
+async function writeReturnedFiles(installPath, files, deleted = []) {
+  const returnedFiles = parseReturnedFiles(files);
+  if (!Array.isArray(deleted) || deleted.some((path2) => typeof path2 !== "string")) {
+    throw new Error("invalid deleted paths");
+  }
+  const root = (0, import_node_path5.resolve)(installPath);
+  const deletedPaths = deleted.map((path2) => validateRelativePath(path2));
+  const filePaths = returnedFiles.map((file2) => validateRelativePath(file2.path));
+  for (const path2 of [...filePaths, ...deletedPaths]) {
+    await assertNoSymlinkComponents(resolveWithin(root, path2), root);
+  }
+  await assertNoSymlinkComponents(root);
+  await ensurePartialRoot(root);
+  for (const [index, file2] of returnedFiles.entries()) {
+    const path2 = filePaths[index];
+    if (path2 === void 0) throw new Error("invalid returned file path");
+    const absolute = resolveWithin(root, path2);
+    await ensureParentDirectory(root, path2);
+    await replacePartialTarget(absolute, decodeBase64(file2.bytes_b64), file2.executable);
+  }
+  for (const path2 of deletedPaths) {
+    const absolute = resolveWithin(root, path2);
+    await removePartialTarget(absolute);
+    await removeEmptyAncestors(root, (0, import_node_path5.dirname)(absolute));
+  }
+}
+async function applyFiles(installPath, files, expectedManifest) {
+  const manifest = parseManifest(expectedManifest);
+  const returnedFiles = parseReturnedFiles(files);
+  const decodedFiles = validateCompleteResponse(returnedFiles, manifest);
+  const destination = (0, import_node_path5.resolve)(installPath);
+  await assertNoSymlinkComponents(destination, (0, import_node_path5.dirname)(destination));
+  await (0, import_promises5.mkdir)((0, import_node_path5.dirname)(destination), { recursive: true });
+  await assertNoSymlinkComponents(destination, (0, import_node_path5.dirname)(destination));
+  let stagePath;
+  let backupPath;
+  let movedDestination = false;
+  try {
+    stagePath = await (0, import_promises5.mkdtemp)((0, import_node_path5.join)((0, import_node_path5.dirname)(destination), ".mica-stage-"));
+    await materializeStage(stagePath, decodedFiles);
+    await verifyTree(stagePath, manifest);
+    const existing = await lstatIfExists(destination);
+    if (existing?.isSymbolicLink()) {
+      throw new Error(`refusing to replace symlink installation root: ${destination}`);
+    }
+    if (existing !== void 0) {
+      backupPath = await createTemporarySibling((0, import_node_path5.dirname)(destination), ".mica-backup-");
+      await (0, import_promises5.rename)(destination, backupPath);
+      movedDestination = true;
+    }
+    try {
+      await (0, import_promises5.rename)(stagePath, destination);
+      stagePath = void 0;
+      await verifyTree(destination, manifest);
+    } catch (error51) {
+      if (movedDestination && backupPath !== void 0) {
+        await (0, import_promises5.rm)(destination, { recursive: true, force: true });
+        await (0, import_promises5.rename)(backupPath, destination);
+        backupPath = void 0;
+        movedDestination = false;
+      } else if (stagePath === void 0) {
+        await (0, import_promises5.rm)(destination, { recursive: true, force: true });
+      }
+      throw error51;
+    }
+  } finally {
+    await removeBestEffort(stagePath);
+    await removeBestEffort(backupPath);
+  }
+}
+function validateCompleteResponse(files, manifest) {
+  const manifestByPath = new Map(manifest.map((entry) => [entry.path, entry]));
+  const seen = /* @__PURE__ */ new Set();
+  const decoded = [];
+  for (const file2 of files) {
+    const path2 = validateRelativePath(file2.path);
+    if (seen.has(path2)) throw new Error(`duplicate returned file: ${path2}`);
+    seen.add(path2);
+    const expected = manifestByPath.get(path2);
+    if (expected === void 0) {
+      throw new Error(`returned file not present in manifest: ${path2}`);
+    }
+    const bytes = decodeBase64(file2.bytes_b64);
+    if (contentHash(bytes) !== expected.content_hash) {
+      throw new Error(`returned file content hash mismatch at ${path2}`);
+    }
+    if (file2.executable !== expected.executable) {
+      throw new Error(`returned file executable metadata mismatch at ${path2}`);
+    }
+    decoded.push({ path: path2, bytes, executable: file2.executable });
+  }
+  for (const entry of manifest) {
+    if (!seen.has(entry.path)) throw new Error(`missing returned file: ${entry.path}`);
+  }
+  return decoded;
+}
+async function materializeStage(stagePath, files) {
+  for (const file2 of files) {
+    const absolute = resolveWithin(stagePath, file2.path);
+    await (0, import_promises5.mkdir)((0, import_node_path5.dirname)(absolute), { recursive: true });
+    await (0, import_promises5.writeFile)(absolute, file2.bytes, { mode: file2.executable ? 493 : 420 });
+    await (0, import_promises5.chmod)(absolute, file2.executable ? 493 : 420);
+  }
+}
+async function verifyTree(stagePath, expected) {
+  const actual = await collectManifest(stagePath);
+  const actualHash = manifestHash(actual.manifest);
+  const expectedHash = manifestHash(expected);
+  if (actualHash !== expectedHash) {
+    const firstMismatch = findFirstMismatch(expected, actual.manifest);
+    if (firstMismatch !== void 0) {
+      throw new Error(`materialization verification failed at ${firstMismatch}`);
+    }
+    throw new Error(
+      `materialization verification failed: manifest hash ${actualHash} does not match expected ${expectedHash}`
+    );
+  }
+}
+function validateRelativePath(path2) {
+  buildManifest([{ path: path2, content_hash: "0".repeat(64), executable: false }]);
+  return path2;
+}
+function resolveWithin(root, relativePath) {
+  const absolute = (0, import_node_path5.resolve)(root, ...relativePath.split("/"));
+  const relativeToRoot = (0, import_node_path5.relative)(root, absolute);
+  if (relativeToRoot === ".." || relativeToRoot.startsWith(`..${import_node_path5.sep}`) || relativeToRoot.startsWith(import_node_path5.sep)) {
+    throw new Error(`path escapes install root: ${relativePath}`);
+  }
+  return absolute;
+}
+async function ensurePartialRoot(root) {
+  const existing = await lstatIfExists(root);
+  if (existing?.isSymbolicLink()) {
+    throw new Error(`refusing to traverse symlink installation root: ${root}`);
+  }
+  if (existing !== void 0 && !existing.isDirectory()) {
+    await (0, import_promises5.rm)(root, { recursive: true, force: true });
+  }
+  await (0, import_promises5.mkdir)(root, { recursive: true });
+  await assertNoSymlinkComponents(root);
+}
+async function ensureParentDirectory(root, relativePath) {
+  let directory = root;
+  for (const component of relativePath.split("/").slice(0, -1)) {
+    directory = (0, import_node_path5.join)(directory, component);
+    const existing = await lstatIfExists(directory);
+    if (existing?.isSymbolicLink()) {
+      throw new Error(`refusing to traverse symlink path component: ${directory}`);
+    }
+    if (existing === void 0) {
+      await (0, import_promises5.mkdir)(directory, { recursive: false });
+    } else if (!existing.isDirectory()) {
+      await (0, import_promises5.rm)(directory, { recursive: true, force: true });
+      await (0, import_promises5.mkdir)(directory, { recursive: false });
+    }
+  }
+}
+async function replacePartialTarget(absolute, bytes, executable) {
+  const existing = await lstatIfExists(absolute);
+  if (existing?.isSymbolicLink()) {
+    throw new Error(`refusing to replace symlink target: ${absolute}`);
+  }
+  if (existing?.isDirectory()) await (0, import_promises5.rm)(absolute, { recursive: true, force: true });
+  await (0, import_promises5.writeFile)(absolute, bytes, { mode: executable ? 493 : 420 });
+  await (0, import_promises5.chmod)(absolute, executable ? 493 : 420);
+}
+async function removePartialTarget(absolute) {
+  const existing = await lstatIfExists(absolute);
+  if (existing?.isSymbolicLink()) {
+    throw new Error(`refusing to remove symlink target: ${absolute}`);
+  }
+  await (0, import_promises5.rm)(absolute, { recursive: true, force: true });
+}
+async function removeEmptyAncestors(root, start) {
+  const rootPath = (0, import_node_path5.resolve)(root);
+  let directory = (0, import_node_path5.resolve)(start);
+  while (directory !== rootPath) {
+    const inside = (0, import_node_path5.relative)(rootPath, directory);
+    if (inside === "" || inside === ".." || inside.startsWith(`..${import_node_path5.sep}`)) return;
+    const stats = await lstatIfExists(directory);
+    if (stats === void 0 || stats.isSymbolicLink() || !stats.isDirectory()) return;
+    if ((await (0, import_promises5.readdir)(directory)).length > 0) return;
+    await (0, import_promises5.rm)(directory, { recursive: false, force: true });
+    directory = (0, import_node_path5.dirname)(directory);
+  }
+}
+var SymlinkComponentError = class extends Error {
+};
+async function assertNoSymlinkComponents(path2, startPath = path2) {
+  const absolute = (0, import_node_path5.resolve)(path2);
+  const start = (0, import_node_path5.resolve)(startPath);
+  const relativePath = (0, import_node_path5.relative)(start, absolute);
+  if (relativePath === ".." || relativePath.startsWith(`..${import_node_path5.sep}`) || relativePath.startsWith(import_node_path5.sep)) {
+    throw new Error(`path is outside checked root: ${path2}`);
+  }
+  let current = start;
+  const startStats = await lstatIfExists(current);
+  if (startStats?.isSymbolicLink()) {
+    throw new SymlinkComponentError(`refusing to traverse symlink path component: ${current}`);
+  }
+  if (startStats !== void 0 && !startStats.isDirectory() && relativePath !== "") return;
+  const components = relativePath.split(import_node_path5.sep).filter(Boolean);
+  for (const component of components) {
+    current = (0, import_node_path5.join)(current, component);
+    const stats = await lstatIfExists(current);
+    if (stats === void 0) return;
+    if (stats.isSymbolicLink()) {
+      throw new SymlinkComponentError(`refusing to traverse symlink path component: ${current}`);
+    }
+    if (!stats.isDirectory() && current !== absolute) return;
+  }
+}
+async function lstatIfExists(path2) {
+  try {
+    return await (0, import_promises5.lstat)(path2);
+  } catch (error51) {
+    if (isMissingPath(error51)) return void 0;
+    throw error51;
+  }
+}
+async function createTemporarySibling(parent, prefix) {
+  const path2 = await (0, import_promises5.mkdtemp)((0, import_node_path5.join)(parent, prefix));
+  try {
+    await (0, import_promises5.rm)(path2, { recursive: true, force: true });
+    return path2;
+  } catch (error51) {
+    await removeBestEffort(path2);
+    throw error51;
+  }
+}
+async function removeBestEffort(path2) {
+  if (path2 === void 0) return;
+  await (0, import_promises5.rm)(path2, { recursive: true, force: true }).catch(() => void 0);
+}
+function decodeBase64(value) {
+  if (!isCanonicalBase64(value)) throw new Error("invalid base64 returned file");
+  return Buffer.from(value, "base64");
+}
+function isCanonicalBase64(value) {
+  if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)) {
+    return false;
+  }
+  return Buffer.from(value, "base64").toString("base64") === value;
+}
+function isMissingPath(error51) {
+  return typeof error51 === "object" && error51 !== null && "code" in error51 && (error51.code === "ENOENT" || error51.code === "ENOTDIR");
+}
+function findFirstMismatch(expected, actual) {
+  const actualByPath = new Map(actual.map((entry) => [entry.path, entry]));
+  for (const expectedEntry of expected) {
+    const actualEntry = actualByPath.get(expectedEntry.path);
+    if (actualEntry === void 0 || actualEntry.content_hash !== expectedEntry.content_hash || actualEntry.executable !== expectedEntry.executable) {
+      return expectedEntry.path;
+    }
+    actualByPath.delete(expectedEntry.path);
+  }
+  const [extra] = actualByPath.keys();
+  return extra;
+}
+function isRecord(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+// src/install-paths.ts
+var import_node_path6 = require("node:path");
+var identityScope = {
+  connectedFolder: void 0,
+  toLocal: (storedPath) => storedPath,
+  toStored: (localPath) => localPath,
+  assertInsideMount: async () => {
+  }
+};
+function createInstallPathScope(connectedFolder, mountedRoot = process.cwd()) {
+  if (connectedFolder === void 0) return identityScope;
+  const persistentRoot = normalizeHostRoot(connectedFolder);
+  const mounted = (0, import_node_path6.resolve)(mountedRoot);
+  return {
+    connectedFolder: persistentRoot,
+    toLocal(storedPath) {
+      const prefix = `${persistentRoot}/`;
+      if (!storedPath.startsWith(prefix)) return void 0;
+      const segments = storedPath.slice(prefix.length).split("/");
+      if (segments.some((segment) => segment === "" || segment === "." || segment === "..")) {
+        return void 0;
+      }
+      return (0, import_node_path6.join)(mounted, ...segments);
+    },
+    toStored(localPath) {
+      const relativePath = (0, import_node_path6.relative)(mounted, (0, import_node_path6.resolve)(localPath));
+      if (relativePath === "" || (0, import_node_path6.isAbsolute)(relativePath) || relativePath === ".." || relativePath.startsWith(`..${import_node_path6.sep}`)) {
+        throw new Error(
+          `${(0, import_node_path6.resolve)(localPath)} is outside the connected folder mounted at ${mounted}.`
+        );
+      }
+      return `${persistentRoot}/${relativePath.split(import_node_path6.sep).join("/")}`;
+    },
+    assertInsideMount: (localPath) => assertNoSymlinkComponents(localPath, mounted)
+  };
+}
+function normalizeHostRoot(connectedFolder) {
+  if (!connectedFolder.startsWith("/")) {
+    throw new Error(
+      `--connected-folder must be an absolute host path; got ${JSON.stringify(connectedFolder)}.`
+    );
+  }
+  const trimmed = connectedFolder.replace(/\/+$/, "");
+  if (trimmed === "") {
+    throw new Error("--connected-folder must not be the filesystem root.");
+  }
+  return trimmed;
+}
+
 // src/transfer.ts
+var import_promises6 = require("node:fs/promises");
+var import_node_path7 = require("node:path");
 async function collectTransfer(root) {
   const collected = await collectManifest(root);
   const blobs = {};
   for (const entry of collected.manifest) {
-    const bytes = await (0, import_promises5.readFile)((0, import_node_path5.join)(root, entry.path));
+    const bytes = await (0, import_promises6.readFile)((0, import_node_path7.join)(root, entry.path));
     const hash2 = contentHash(bytes);
     if (hash2 !== entry.content_hash) {
       throw new Error(`file changed while scanning: ${root}/${entry.path}`);
@@ -45915,7 +46262,7 @@ async function collectTransfer(root) {
 // src/snapshot.ts
 var detachedInstallationSchema = {
   parse(data) {
-    if (!isRecord(data) || !isRecord(data.installation)) {
+    if (!isRecord2(data) || !isRecord2(data.installation)) {
       throw new Error("invalid detached installation response");
     }
     const installation = data.installation;
@@ -45933,7 +46280,7 @@ var detachedInstallationSchema = {
 };
 var installationsSchema = {
   parse(data) {
-    if (!isRecord(data) || !Array.isArray(data.installations)) {
+    if (!isRecord2(data) || !Array.isArray(data.installations)) {
       throw new Error("invalid installations response");
     }
     return {
@@ -45943,7 +46290,7 @@ var installationsSchema = {
 };
 var snapshotSchema = {
   parse(data) {
-    if (!isRecord(data) || typeof data.changed !== "boolean") {
+    if (!isRecord2(data) || typeof data.changed !== "boolean") {
       throw new Error("invalid snapshot response");
     }
     return { changed: data.changed };
@@ -45953,18 +46300,29 @@ async function runSnapshotScan(client, options = {}) {
   const { installations } = await client.request("GET", "/v1/installations", installationsSchema);
   const results = [];
   const skippedSymlinks = [];
+  const scope = options.scope ?? createInstallPathScope();
   for (const installation of installations) {
     if (installation.state !== "active") continue;
-    if (await classifyInstallRoot(installation.install_path) !== "directory") {
+    if (installation.id === options.excludeInstallationId) continue;
+    const localPath = scope.toLocal(installation.install_path);
+    if (localPath === void 0) continue;
+    try {
+      await scope.assertInsideMount(localPath);
+    } catch (error51) {
+      if (!(error51 instanceof SymlinkComponentError)) throw error51;
+      await detachInstallation(client, installation);
+      continue;
+    }
+    if (await classifyInstallRoot(localPath) !== "directory") {
       await detachInstallation(client, installation);
       continue;
     }
     let transfer;
     try {
-      transfer = await collectTransfer(installation.install_path);
+      transfer = await collectTransfer(localPath);
     } catch (error51) {
       if (!isMissingInstallPathError(error51)) throw error51;
-      if (await classifyInstallRoot(installation.install_path) !== "directory") {
+      if (await classifyInstallRoot(localPath) !== "directory") {
         await detachInstallation(client, installation);
         continue;
       }
@@ -45973,7 +46331,7 @@ async function runSnapshotScan(client, options = {}) {
     skippedSymlinks.push(
       ...transfer.skippedSymlinks.map((path2) => ({
         installation_id: installation.id,
-        install_path: installation.install_path,
+        install_path: localPath,
         path: path2
       }))
     );
@@ -46013,7 +46371,7 @@ async function detachInstallation(client, installation) {
 async function classifyInstallRoot(path2) {
   let details;
   try {
-    details = await (0, import_promises6.lstat)(path2);
+    details = await (0, import_promises7.lstat)(path2);
   } catch (error51) {
     if (isMissingInstallPathError(error51)) return "missing";
     throw error51;
@@ -46023,15 +46381,15 @@ async function classifyInstallRoot(path2) {
   return "directory";
 }
 function isMissingInstallPathError(error51) {
-  return isRecord(error51) && (error51.code === "ENOENT" || error51.code === "ENOTDIR");
+  return isRecord2(error51) && (error51.code === "ENOENT" || error51.code === "ENOTDIR");
 }
-function isRecord(value) {
+function isRecord2(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 function parseInstallation(value) {
-  if (!isRecord(value)) throw new Error("invalid installation response");
+  if (!isRecord2(value)) throw new Error("invalid installation response");
   const skill = value.skill;
-  if (typeof value.id !== "string" || typeof value.install_path !== "string" || value.state !== "active" && value.state !== "detached" || typeof value.owner !== "boolean" || typeof value.baseline_manifest_hash !== "string" || !isRecord(skill) || typeof skill.id !== "string" || typeof skill.name !== "string") {
+  if (typeof value.id !== "string" || typeof value.install_path !== "string" || value.state !== "active" && value.state !== "detached" || typeof value.owner !== "boolean" || typeof value.baseline_manifest_hash !== "string" || !isRecord2(skill) || typeof skill.id !== "string" || typeof skill.name !== "string") {
     throw new Error("invalid installation response");
   }
   return {
@@ -46045,12 +46403,12 @@ function parseInstallation(value) {
 }
 
 // src/status.ts
-var import_node_path6 = require("node:path");
+var import_node_path8 = require("node:path");
 
 // src/contribute.ts
 var contributablesSchema = {
   parse(data) {
-    if (!isRecord2(data) || !Array.isArray(data.intents) || !isRecord2(data.cut_against_revision)) {
+    if (!isRecord3(data) || !Array.isArray(data.intents) || !isRecord3(data.cut_against_revision)) {
       throw new Error("invalid contributables response");
     }
     return {
@@ -46062,11 +46420,11 @@ var contributablesSchema = {
 };
 var createContributionSchema = {
   parse(data) {
-    if (!isRecord2(data) || !isRecord2(data.contribution_candidate)) {
+    if (!isRecord3(data) || !isRecord3(data.contribution_candidate)) {
       throw new Error("invalid contribution response");
     }
     const candidate = data.contribution_candidate;
-    if (!isRecord2(candidate.rebased_onto_revision)) {
+    if (!isRecord3(candidate.rebased_onto_revision)) {
       throw new Error("invalid contribution response");
     }
     const rebasedOntoRevision = parseRevisionRef(candidate.rebased_onto_revision);
@@ -46081,7 +46439,7 @@ var createContributionSchema = {
         questions: candidate.questions.map((question) => questionSchema.parse(question))
       };
     }
-    if (isRecord2(candidate.question) && typeof candidate.summary === "string" && Array.isArray(candidate.security_flags) && Array.isArray(candidate.conflicts)) {
+    if (isRecord3(candidate.question) && typeof candidate.summary === "string" && Array.isArray(candidate.security_flags) && Array.isArray(candidate.conflicts)) {
       return {
         outcome: "clean",
         summary: candidate.summary,
@@ -46095,7 +46453,7 @@ var createContributionSchema = {
   }
 };
 async function runContribute(client, options) {
-  await runSnapshotScan(client, {});
+  await runSnapshotScan(client, { scope: options.scope });
   const installation = await findInstallation(client, options.skill);
   let contributables;
   try {
@@ -46186,7 +46544,7 @@ async function runContribute(client, options) {
 }
 var contributionsListSchema = {
   parse(data) {
-    if (!isRecord2(data) || !Array.isArray(data.contributions)) {
+    if (!isRecord3(data) || !Array.isArray(data.contributions)) {
       throw new Error("invalid contributions response");
     }
     return { contributions: data.contributions.map(parseContributionListEntry) };
@@ -46211,11 +46569,11 @@ function parseIntentIds(raw) {
   return raw.split(/[,\s]+/).map((id) => id.trim()).filter((id) => id.length > 0);
 }
 function isNothingToContribute(error51) {
-  const body = isRecord2(error51.body) ? error51.body : void 0;
+  const body = isRecord3(error51.body) ? error51.body : void 0;
   return body?.error === "nothing_to_contribute";
 }
 function contributeErrorMessage(error51) {
-  const body = isRecord2(error51.body) ? error51.body : void 0;
+  const body = isRecord3(error51.body) ? error51.body : void 0;
   const code = typeof body?.error === "string" ? body.error : void 0;
   if (code === "hunks_do_not_apply") {
     const paths = Array.isArray(body?.paths) ? body.paths.filter((path2) => typeof path2 === "string") : [];
@@ -46231,7 +46589,7 @@ function requireString(value) {
   return value;
 }
 function parseContributeIntent(value) {
-  if (!isRecord2(value) || typeof value.id !== "string" || typeof value.kind !== "string" || typeof value.status !== "string" || typeof value.text !== "string" || !Array.isArray(value.paths) || typeof value.hunk_count !== "number") {
+  if (!isRecord3(value) || typeof value.id !== "string" || typeof value.kind !== "string" || typeof value.status !== "string" || typeof value.text !== "string" || !Array.isArray(value.paths) || typeof value.hunk_count !== "number") {
     throw new Error("invalid contribute intent");
   }
   return {
@@ -46244,19 +46602,19 @@ function parseContributeIntent(value) {
   };
 }
 function parseUnattributed(value) {
-  if (!isRecord2(value) || typeof value.hunk_count !== "number" || !Array.isArray(value.paths)) {
+  if (!isRecord3(value) || typeof value.hunk_count !== "number" || !Array.isArray(value.paths)) {
     throw new Error("invalid unattributed delta");
   }
   return { hunk_count: value.hunk_count, paths: value.paths.map(requireString) };
 }
 function parseRevisionRef(value) {
-  if (!isRecord2(value) || typeof value.id !== "string" || typeof value.number !== "number") {
+  if (!isRecord3(value) || typeof value.id !== "string" || typeof value.number !== "number") {
     throw new Error("invalid revision reference");
   }
   return { id: value.id, number: value.number };
 }
 function parseContributeSecurityFlag(value) {
-  if (!isRecord2(value) || value.severity !== "info" && value.severity !== "warning" || typeof value.kind !== "string" || typeof value.path !== "string" || typeof value.explanation !== "string") {
+  if (!isRecord3(value) || value.severity !== "info" && value.severity !== "warning" || typeof value.kind !== "string" || typeof value.path !== "string" || typeof value.explanation !== "string") {
     throw new Error("invalid security flag");
   }
   return {
@@ -46267,7 +46625,7 @@ function parseContributeSecurityFlag(value) {
   };
 }
 function parseContributionListEntry(value) {
-  if (!isRecord2(value) || typeof value.id !== "string" || typeof value.skill_name !== "string" || typeof value.state !== "string" || !(value.owner_note === null || typeof value.owner_note === "string") || !(value.supersedes_id === null || typeof value.supersedes_id === "string") || typeof value.created_at !== "string") {
+  if (!isRecord3(value) || typeof value.id !== "string" || typeof value.skill_name !== "string" || typeof value.state !== "string" || !(value.owner_note === null || typeof value.owner_note === "string") || !(value.supersedes_id === null || typeof value.supersedes_id === "string") || typeof value.created_at !== "string") {
     throw new Error("invalid contribution list entry");
   }
   return {
@@ -46279,22 +46637,37 @@ function parseContributionListEntry(value) {
     created_at: value.created_at
   };
 }
-function isRecord2(value) {
+function isRecord3(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 // src/status.ts
-async function runStatus(client) {
-  await runSnapshotScan(client, {});
+async function runStatus(client, options = {}) {
+  const scope = options.scope ?? createInstallPathScope();
+  await runSnapshotScan(client, { scope });
   const { installations } = await client.request("GET", "/v1/installations", installationsSchema);
   const status = [];
   for (const installation of installations) {
-    const nameMismatch = (0, import_node_path6.basename)(installation.install_path) !== installation.skill.name;
+    const localPath = scope.toLocal(installation.install_path);
+    if (localPath === void 0) {
+      status.push({
+        installation_id: installation.id,
+        skill_name: installation.skill.name,
+        install_path: null,
+        recorded_path: installation.install_path,
+        state: installation.state,
+        owner: installation.owner,
+        drifted: null,
+        name_mismatch: (0, import_node_path8.basename)(installation.install_path) !== installation.skill.name
+      });
+      continue;
+    }
+    const nameMismatch = (0, import_node_path8.basename)(localPath) !== installation.skill.name;
     if (installation.state === "detached") {
       status.push({
         installation_id: installation.id,
         skill_name: installation.skill.name,
-        install_path: installation.install_path,
+        install_path: localPath,
         state: "detached",
         owner: installation.owner,
         drifted: null,
@@ -46302,11 +46675,11 @@ async function runStatus(client) {
       });
       continue;
     }
-    const { manifest } = await collectManifest(installation.install_path);
+    const { manifest } = await collectManifest(localPath);
     status.push({
       installation_id: installation.id,
       skill_name: installation.skill.name,
-      install_path: installation.install_path,
+      install_path: localPath,
       state: "active",
       owner: installation.owner,
       drifted: manifestHash(manifest) !== installation.baseline_manifest_hash,
@@ -46323,295 +46696,6 @@ async function runStatus(client) {
       owner_note: contribution.owner_note
     }))
   };
-}
-
-// src/files.ts
-var import_promises7 = require("node:fs/promises");
-var import_node_path7 = require("node:path");
-function parseManifestEntry(value) {
-  if (!isRecord3(value) || typeof value.path !== "string" || typeof value.content_hash !== "string" || !/^[0-9a-f]{64}$/.test(value.content_hash) || typeof value.executable !== "boolean") {
-    throw new Error("invalid manifest entry");
-  }
-  return {
-    path: value.path,
-    content_hash: value.content_hash,
-    executable: value.executable
-  };
-}
-function parseManifest(value) {
-  if (!Array.isArray(value)) throw new Error("invalid manifest");
-  return buildManifest(value.map(parseManifestEntry));
-}
-function parseReturnedFile(value) {
-  if (!isRecord3(value) || typeof value.path !== "string" || typeof value.bytes_b64 !== "string" || typeof value.executable !== "boolean") {
-    throw new Error("invalid returned file");
-  }
-  if (!isCanonicalBase64(value.bytes_b64)) throw new Error("invalid base64 returned file");
-  return { path: value.path, bytes_b64: value.bytes_b64, executable: value.executable };
-}
-function parseReturnedFiles(value) {
-  if (!Array.isArray(value)) throw new Error("invalid returned files");
-  return value.map(parseReturnedFile);
-}
-async function writeReturnedFiles(installPath, files, deleted = []) {
-  const returnedFiles = parseReturnedFiles(files);
-  if (!Array.isArray(deleted) || deleted.some((path2) => typeof path2 !== "string")) {
-    throw new Error("invalid deleted paths");
-  }
-  const root = (0, import_node_path7.resolve)(installPath);
-  const deletedPaths = deleted.map((path2) => validateRelativePath(path2));
-  const filePaths = returnedFiles.map((file2) => validateRelativePath(file2.path));
-  for (const path2 of [...filePaths, ...deletedPaths]) {
-    await assertNoSymlinkComponents(resolveWithin(root, path2), root);
-  }
-  await assertNoSymlinkComponents(root);
-  await ensurePartialRoot(root);
-  for (const [index, file2] of returnedFiles.entries()) {
-    const path2 = filePaths[index];
-    if (path2 === void 0) throw new Error("invalid returned file path");
-    const absolute = resolveWithin(root, path2);
-    await ensureParentDirectory(root, path2);
-    await replacePartialTarget(absolute, decodeBase64(file2.bytes_b64), file2.executable);
-  }
-  for (const path2 of deletedPaths) {
-    const absolute = resolveWithin(root, path2);
-    await removePartialTarget(absolute);
-    await removeEmptyAncestors(root, (0, import_node_path7.dirname)(absolute));
-  }
-}
-async function applyFiles(installPath, files, expectedManifest) {
-  const manifest = parseManifest(expectedManifest);
-  const returnedFiles = parseReturnedFiles(files);
-  const decodedFiles = validateCompleteResponse(returnedFiles, manifest);
-  const destination = (0, import_node_path7.resolve)(installPath);
-  await assertNoSymlinkComponents(destination, (0, import_node_path7.dirname)(destination));
-  await (0, import_promises7.mkdir)((0, import_node_path7.dirname)(destination), { recursive: true });
-  await assertNoSymlinkComponents(destination, (0, import_node_path7.dirname)(destination));
-  let stagePath;
-  let backupPath;
-  let movedDestination = false;
-  try {
-    stagePath = await (0, import_promises7.mkdtemp)((0, import_node_path7.join)((0, import_node_path7.dirname)(destination), ".mica-stage-"));
-    await materializeStage(stagePath, decodedFiles);
-    await verifyTree(stagePath, manifest);
-    const existing = await lstatIfExists(destination);
-    if (existing?.isSymbolicLink()) {
-      throw new Error(`refusing to replace symlink installation root: ${destination}`);
-    }
-    if (existing !== void 0) {
-      backupPath = await createTemporarySibling((0, import_node_path7.dirname)(destination), ".mica-backup-");
-      await (0, import_promises7.rename)(destination, backupPath);
-      movedDestination = true;
-    }
-    try {
-      await (0, import_promises7.rename)(stagePath, destination);
-      stagePath = void 0;
-      await verifyTree(destination, manifest);
-    } catch (error51) {
-      if (movedDestination && backupPath !== void 0) {
-        await (0, import_promises7.rm)(destination, { recursive: true, force: true });
-        await (0, import_promises7.rename)(backupPath, destination);
-        backupPath = void 0;
-        movedDestination = false;
-      } else if (stagePath === void 0) {
-        await (0, import_promises7.rm)(destination, { recursive: true, force: true });
-      }
-      throw error51;
-    }
-  } finally {
-    await removeBestEffort(stagePath);
-    await removeBestEffort(backupPath);
-  }
-}
-function validateCompleteResponse(files, manifest) {
-  const manifestByPath = new Map(manifest.map((entry) => [entry.path, entry]));
-  const seen = /* @__PURE__ */ new Set();
-  const decoded = [];
-  for (const file2 of files) {
-    const path2 = validateRelativePath(file2.path);
-    if (seen.has(path2)) throw new Error(`duplicate returned file: ${path2}`);
-    seen.add(path2);
-    const expected = manifestByPath.get(path2);
-    if (expected === void 0) {
-      throw new Error(`returned file not present in manifest: ${path2}`);
-    }
-    const bytes = decodeBase64(file2.bytes_b64);
-    if (contentHash(bytes) !== expected.content_hash) {
-      throw new Error(`returned file content hash mismatch at ${path2}`);
-    }
-    if (file2.executable !== expected.executable) {
-      throw new Error(`returned file executable metadata mismatch at ${path2}`);
-    }
-    decoded.push({ path: path2, bytes, executable: file2.executable });
-  }
-  for (const entry of manifest) {
-    if (!seen.has(entry.path)) throw new Error(`missing returned file: ${entry.path}`);
-  }
-  return decoded;
-}
-async function materializeStage(stagePath, files) {
-  for (const file2 of files) {
-    const absolute = resolveWithin(stagePath, file2.path);
-    await (0, import_promises7.mkdir)((0, import_node_path7.dirname)(absolute), { recursive: true });
-    await (0, import_promises7.writeFile)(absolute, file2.bytes, { mode: file2.executable ? 493 : 420 });
-    await (0, import_promises7.chmod)(absolute, file2.executable ? 493 : 420);
-  }
-}
-async function verifyTree(stagePath, expected) {
-  const actual = await collectManifest(stagePath);
-  const actualHash = manifestHash(actual.manifest);
-  const expectedHash = manifestHash(expected);
-  if (actualHash !== expectedHash) {
-    const firstMismatch = findFirstMismatch(expected, actual.manifest);
-    if (firstMismatch !== void 0) {
-      throw new Error(`materialization verification failed at ${firstMismatch}`);
-    }
-    throw new Error(
-      `materialization verification failed: manifest hash ${actualHash} does not match expected ${expectedHash}`
-    );
-  }
-}
-function validateRelativePath(path2) {
-  buildManifest([{ path: path2, content_hash: "0".repeat(64), executable: false }]);
-  return path2;
-}
-function resolveWithin(root, relativePath) {
-  const absolute = (0, import_node_path7.resolve)(root, ...relativePath.split("/"));
-  const relativeToRoot = (0, import_node_path7.relative)(root, absolute);
-  if (relativeToRoot === ".." || relativeToRoot.startsWith(`..${import_node_path7.sep}`) || relativeToRoot.startsWith(import_node_path7.sep)) {
-    throw new Error(`path escapes install root: ${relativePath}`);
-  }
-  return absolute;
-}
-async function ensurePartialRoot(root) {
-  const existing = await lstatIfExists(root);
-  if (existing?.isSymbolicLink()) {
-    throw new Error(`refusing to traverse symlink installation root: ${root}`);
-  }
-  if (existing !== void 0 && !existing.isDirectory()) {
-    await (0, import_promises7.rm)(root, { recursive: true, force: true });
-  }
-  await (0, import_promises7.mkdir)(root, { recursive: true });
-  await assertNoSymlinkComponents(root);
-}
-async function ensureParentDirectory(root, relativePath) {
-  let directory = root;
-  for (const component of relativePath.split("/").slice(0, -1)) {
-    directory = (0, import_node_path7.join)(directory, component);
-    const existing = await lstatIfExists(directory);
-    if (existing?.isSymbolicLink()) {
-      throw new Error(`refusing to traverse symlink path component: ${directory}`);
-    }
-    if (existing === void 0) {
-      await (0, import_promises7.mkdir)(directory, { recursive: false });
-    } else if (!existing.isDirectory()) {
-      await (0, import_promises7.rm)(directory, { recursive: true, force: true });
-      await (0, import_promises7.mkdir)(directory, { recursive: false });
-    }
-  }
-}
-async function replacePartialTarget(absolute, bytes, executable) {
-  const existing = await lstatIfExists(absolute);
-  if (existing?.isSymbolicLink()) {
-    throw new Error(`refusing to replace symlink target: ${absolute}`);
-  }
-  if (existing?.isDirectory()) await (0, import_promises7.rm)(absolute, { recursive: true, force: true });
-  await (0, import_promises7.writeFile)(absolute, bytes, { mode: executable ? 493 : 420 });
-  await (0, import_promises7.chmod)(absolute, executable ? 493 : 420);
-}
-async function removePartialTarget(absolute) {
-  const existing = await lstatIfExists(absolute);
-  if (existing?.isSymbolicLink()) {
-    throw new Error(`refusing to remove symlink target: ${absolute}`);
-  }
-  await (0, import_promises7.rm)(absolute, { recursive: true, force: true });
-}
-async function removeEmptyAncestors(root, start) {
-  const rootPath = (0, import_node_path7.resolve)(root);
-  let directory = (0, import_node_path7.resolve)(start);
-  while (directory !== rootPath) {
-    const inside = (0, import_node_path7.relative)(rootPath, directory);
-    if (inside === "" || inside === ".." || inside.startsWith(`..${import_node_path7.sep}`)) return;
-    const stats = await lstatIfExists(directory);
-    if (stats === void 0 || stats.isSymbolicLink() || !stats.isDirectory()) return;
-    if ((await (0, import_promises7.readdir)(directory)).length > 0) return;
-    await (0, import_promises7.rm)(directory, { recursive: false, force: true });
-    directory = (0, import_node_path7.dirname)(directory);
-  }
-}
-async function assertNoSymlinkComponents(path2, startPath = path2) {
-  const absolute = (0, import_node_path7.resolve)(path2);
-  const start = (0, import_node_path7.resolve)(startPath);
-  const relativePath = (0, import_node_path7.relative)(start, absolute);
-  if (relativePath === ".." || relativePath.startsWith(`..${import_node_path7.sep}`) || relativePath.startsWith(import_node_path7.sep)) {
-    throw new Error(`path is outside checked root: ${path2}`);
-  }
-  let current = start;
-  const startStats = await lstatIfExists(current);
-  if (startStats?.isSymbolicLink()) {
-    throw new Error(`refusing to traverse symlink path component: ${current}`);
-  }
-  if (startStats !== void 0 && !startStats.isDirectory() && relativePath !== "") return;
-  const components = relativePath.split(import_node_path7.sep).filter(Boolean);
-  for (const component of components) {
-    current = (0, import_node_path7.join)(current, component);
-    const stats = await lstatIfExists(current);
-    if (stats === void 0) return;
-    if (stats.isSymbolicLink()) {
-      throw new Error(`refusing to traverse symlink path component: ${current}`);
-    }
-    if (!stats.isDirectory() && current !== absolute) return;
-  }
-}
-async function lstatIfExists(path2) {
-  try {
-    return await (0, import_promises7.lstat)(path2);
-  } catch (error51) {
-    if (isMissingPath(error51)) return void 0;
-    throw error51;
-  }
-}
-async function createTemporarySibling(parent, prefix) {
-  const path2 = await (0, import_promises7.mkdtemp)((0, import_node_path7.join)(parent, prefix));
-  try {
-    await (0, import_promises7.rm)(path2, { recursive: true, force: true });
-    return path2;
-  } catch (error51) {
-    await removeBestEffort(path2);
-    throw error51;
-  }
-}
-async function removeBestEffort(path2) {
-  if (path2 === void 0) return;
-  await (0, import_promises7.rm)(path2, { recursive: true, force: true }).catch(() => void 0);
-}
-function decodeBase64(value) {
-  if (!isCanonicalBase64(value)) throw new Error("invalid base64 returned file");
-  return Buffer.from(value, "base64");
-}
-function isCanonicalBase64(value) {
-  if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value)) {
-    return false;
-  }
-  return Buffer.from(value, "base64").toString("base64") === value;
-}
-function isMissingPath(error51) {
-  return typeof error51 === "object" && error51 !== null && "code" in error51 && (error51.code === "ENOENT" || error51.code === "ENOTDIR");
-}
-function findFirstMismatch(expected, actual) {
-  const actualByPath = new Map(actual.map((entry) => [entry.path, entry]));
-  for (const expectedEntry of expected) {
-    const actualEntry = actualByPath.get(expectedEntry.path);
-    if (actualEntry === void 0 || actualEntry.content_hash !== expectedEntry.content_hash || actualEntry.executable !== expectedEntry.executable) {
-      return expectedEntry.path;
-    }
-    actualByPath.delete(expectedEntry.path);
-  }
-  const [extra] = actualByPath.keys();
-  return extra;
-}
-function isRecord3(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 // src/update.ts
@@ -46652,15 +46736,26 @@ var updateResponseSchema = {
   }
 };
 async function runUpdate(client, options = {}) {
-  await runSnapshotScan(client, {});
+  const scope = options.scope ?? createInstallPathScope();
+  await runSnapshotScan(client, { scope });
   const { installations } = await client.request("GET", "/v1/installations", installationsSchema);
   if (options.skill !== void 0 && !installations.some((installation) => installation.skill.name === options.skill)) {
     throw new Error(`No installation found for skill "${options.skill}".`);
   }
   const matching = selectInstallations(installations, options.skill);
+  const resolved = matching.flatMap((installation) => {
+    const localPath = scope.toLocal(installation.install_path);
+    return localPath === void 0 ? [] : [{ installation, localPath }];
+  });
+  if (options.skill !== void 0 && matching.length > 0 && resolved.length === 0) {
+    throw new Error(
+      `The recorded path of ${options.skill} is outside the selected connected folder. Relink it to its directory in this folder first.`
+    );
+  }
   const results = [];
   const questionsById = /* @__PURE__ */ new Map();
-  for (const installation of matching) {
+  for (const { installation, localPath } of resolved) {
+    await scope.assertInsideMount(localPath);
     const response = await client.request(
       "POST",
       `/v1/installations/${encodeURIComponent(installation.id)}/updates`,
@@ -46676,7 +46771,7 @@ async function runUpdate(client, options = {}) {
       });
       continue;
     }
-    await applyFiles(installation.install_path, response.files, response.manifest);
+    await applyFiles(localPath, response.files, response.manifest);
     for (const question of response.questions) {
       questionsById.set(question.question_id, question);
     }
@@ -46727,27 +46822,31 @@ var baselineFilesSchema = {
     };
   }
 };
-async function restoreBaseline(client, installation) {
+async function restoreBaseline(client, installation, localPath) {
   const response = await client.request(
     "GET",
     `/v1/installations/${encodeURIComponent(installation.id)}/files?at=baseline`,
     baselineFilesSchema
   );
   confirmInstallation(installation, response);
-  await applyFiles(installation.install_path, response.files, response.manifest);
+  await applyFiles(localPath, response.files, response.manifest);
   return {
     installation_id: installation.id,
     skill_name: installation.skill.name,
-    install_path: installation.install_path
+    install_path: localPath
   };
 }
-async function runRevert(client) {
-  await runSnapshotScan(client, {});
+async function runRevert(client, options = {}) {
+  const scope = options.scope ?? createInstallPathScope();
+  await runSnapshotScan(client, { scope });
   const { installations } = await client.request("GET", "/v1/installations", installationsSchema);
   const restored = [];
   for (const installation of installations) {
     if (installation.state !== "active") continue;
-    restored.push(await restoreBaseline(client, installation));
+    const localPath = scope.toLocal(installation.install_path);
+    if (localPath === void 0) continue;
+    await scope.assertInsideMount(localPath);
+    restored.push(await restoreBaseline(client, installation, localPath));
   }
   return { restored: restored.length, installations: restored };
 }
@@ -46765,14 +46864,14 @@ var import_promises8 = require("node:fs/promises");
 
 // src/claude-paths.ts
 var import_node_os3 = require("node:os");
-var import_node_path8 = require("node:path");
+var import_node_path9 = require("node:path");
 function resolvePersonalSkillPath(skillName, options = {}) {
   if (skillName.toLowerCase() === "synced") {
     throw new Error("reserved skill name: synced");
   }
   const configuredDir = "configDir" in options ? options.configDir : process.env.CLAUDE_CONFIG_DIR;
-  const configDir = configuredDir || (0, import_node_path8.join)(options.homeDir ?? (0, import_node_os3.homedir)(), ".claude");
-  return (0, import_node_path8.join)(configDir, "skills", skillName);
+  const configDir = configuredDir || (0, import_node_path9.join)(options.homeDir ?? (0, import_node_os3.homedir)(), ".claude");
+  return (0, import_node_path9.join)(configDir, "skills", skillName);
 }
 
 // src/install.ts
@@ -46799,18 +46898,21 @@ var installResponseSchema = {
   }
 };
 async function runInstall(client, options) {
-  await runSnapshotScan(client, {});
+  const scope = options.scope ?? createInstallPathScope();
+  await runSnapshotScan(client, { scope });
   const pathOptions = {};
   if (options.configDir !== void 0) pathOptions.configDir = options.configDir;
   if (options.homeDir !== void 0) pathOptions.homeDir = options.homeDir;
   const installPath = resolvePersonalSkillPath(options.skill, pathOptions);
+  const storedPath = scope.toStored(installPath);
+  await scope.assertInsideMount(installPath);
   await ensureInstallTarget(installPath);
   const existing = (await (0, import_promises8.readdir)(installPath)).length > 0;
   let local = null;
   if (existing) local = await collectTransfer(installPath);
   const request = {
     skill_name: options.skill,
-    install_path: installPath,
+    install_path: storedPath,
     ...local !== null && { local: { manifest: local.manifest, blobs: local.blobs } }
   };
   const response = await client.request(
@@ -46819,7 +46921,7 @@ async function runInstall(client, options) {
     installResponseSchema,
     request
   );
-  if (response.installation.install_path !== installPath || response.installation.skill.name !== options.skill) {
+  if (response.installation.install_path !== storedPath || response.installation.skill.name !== options.skill) {
     throw new Error("invalid installation response");
   }
   if (local === null) await applyFiles(installPath, response.files, response.manifest);
@@ -46903,7 +47005,7 @@ function isPassStatus(value) {
 }
 
 // src/publish.ts
-var import_node_path9 = require("node:path");
+var import_node_path10 = require("node:path");
 var import_promises9 = require("node:fs/promises");
 var publishResponseSchema = {
   parse(data) {
@@ -46924,27 +47026,34 @@ var publishResponseSchema = {
   }
 };
 async function runPublish(client, options) {
-  const scan = await runSnapshotScan(client, {});
-  const publishPath = (0, import_node_path9.resolve)(options.path);
+  const scope = options.scope ?? createInstallPathScope();
+  const scan = await runSnapshotScan(client, { scope });
+  const publishPath = (0, import_node_path10.resolve)(options.path);
+  const storedPath = scope.toStored(publishPath);
+  await scope.assertInsideMount(publishPath);
   await ensurePublishDirectory(publishPath);
   const transfer = await collectTransfer(publishPath);
-  const directoryName = (0, import_node_path9.basename)(publishPath);
+  const directoryName = (0, import_node_path10.basename)(publishPath);
   let response;
   try {
     response = await client.request("POST", "/v1/skills", publishResponseSchema, {
       manifest: transfer.manifest,
       blobs: transfer.blobs,
       directory_name: directoryName,
-      install_path: publishPath
+      install_path: storedPath,
+      ...scope.connectedFolder !== void 0 && { connected_folder: scope.connectedFolder }
     });
   } catch (error51) {
-    if (error51 instanceof ApiError) throw new Error(publishErrorMessage(error51));
+    if (error51 instanceof ApiError) throw new Error(namedApiErrorMessage(error51));
     throw error51;
+  }
+  if (response.installation.install_path !== storedPath) {
+    throw new Error("invalid publish response");
   }
   return {
     skill_name: response.skill.name,
     revision_number: response.revision.number,
-    install_path: response.installation.install_path,
+    install_path: publishPath,
     warnings: response.warnings,
     security_flags: response.security_flags,
     skippedSymlinks: transfer.skippedSymlinks,
@@ -46965,13 +47074,6 @@ async function ensurePublishDirectory(path2) {
 }
 function isMissingPath3(error51) {
   return isRecord7(error51) && (error51.code === "ENOENT" || error51.code === "ENOTDIR");
-}
-function publishErrorMessage(error51) {
-  const body = isRecord7(error51.body) ? error51.body : void 0;
-  const code = typeof body?.error === "string" ? body.error : void 0;
-  if (code === void 0) return error51.message;
-  const detail = typeof body?.detail === "string" ? body.detail : void 0;
-  return detail !== void 0 ? `${code}: ${detail}` : code;
 }
 function isRecord7(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -46999,7 +47101,7 @@ function isPassStatus2(value) {
 
 // src/detached-exits.ts
 var import_promises10 = require("node:fs/promises");
-var import_node_path10 = require("node:path");
+var import_node_path11 = require("node:path");
 var installationPatchSchema = {
   parse(data) {
     if (!isRecord8(data) || !isRecord8(data.installation)) {
@@ -47021,28 +47123,47 @@ var installationPatchSchema = {
   }
 };
 async function runRelink(client, options) {
-  await runSnapshotScan(client, {});
-  const installation = await findInstallation2(client, options.skill);
-  const installPath = (0, import_node_path10.resolve)(options.path);
+  const scope = options.scope ?? createInstallPathScope();
+  const { installation, installations } = await findInstallation2(client, options.skill, "relink");
+  const installPath = (0, import_node_path11.resolve)(options.path);
+  const storedPath = scope.toStored(installPath);
+  const occupant = installations.find(
+    (candidate) => candidate.id !== installation.id && candidate.install_path === storedPath
+  );
+  if (occupant) {
+    throw new Error(
+      `Another installation (${occupant.skill.name}) is already recorded at ${installPath}; relink stopped.`
+    );
+  }
+  await scope.assertInsideMount(installPath);
   await verifyDirectory(options.path, installPath);
+  await runSnapshotScan(client, { scope, excludeInstallationId: installation.id });
   const response = await client.request(
     "PATCH",
     `/v1/installations/${encodeURIComponent(installation.id)}`,
     installationPatchSchema,
-    { state: "active", install_path: installPath }
+    { state: "active", install_path: storedPath }
   );
-  confirmPatch(installation, response, "active", installPath);
+  confirmPatch(installation, response, "active", storedPath);
   return {
     installation_id: response.installation.id,
     skill_name: response.installation.skill.name,
-    install_path: response.installation.install_path,
-    name_mismatch: (0, import_node_path10.basename)(installPath) !== response.installation.skill.name
+    install_path: installPath,
+    name_mismatch: (0, import_node_path11.basename)(installPath) !== response.installation.skill.name
   };
 }
 async function runRestore(client, options) {
-  await runSnapshotScan(client, {});
-  const installation = await findInstallation2(client, options.skill);
-  const restored = await restoreBaseline(client, installation);
+  const scope = options.scope ?? createInstallPathScope();
+  await runSnapshotScan(client, { scope });
+  const { installation } = await findInstallation2(client, options.skill, "restore");
+  const localPath = scope.toLocal(installation.install_path);
+  if (localPath === void 0) {
+    throw new Error(
+      `The recorded path of ${options.skill} is outside the selected connected folder. Relink it to its directory in this folder first.`
+    );
+  }
+  await scope.assertInsideMount(localPath);
+  const restored = await restoreBaseline(client, installation, localPath);
   const response = await client.request(
     "PATCH",
     `/v1/installations/${encodeURIComponent(installation.id)}`,
@@ -47053,8 +47174,9 @@ async function runRestore(client, options) {
   return restored;
 }
 async function runUninstall(client, options) {
-  await runSnapshotScan(client, {});
-  const installation = await findInstallation2(client, options.skill);
+  const scope = options.scope ?? createInstallPathScope();
+  await runSnapshotScan(client, { scope });
+  const { installation } = await findInstallation2(client, options.skill, "uninstall");
   const response = await client.request(
     "PATCH",
     `/v1/installations/${encodeURIComponent(installation.id)}`,
@@ -47062,17 +47184,24 @@ async function runUninstall(client, options) {
     { state: "uninstalled" }
   );
   confirmPatch(installation, response, "uninstalled", installation.install_path);
+  const localPath = scope.toLocal(response.installation.install_path);
   return {
     installation_id: response.installation.id,
     skill_name: response.installation.skill.name,
-    install_path: response.installation.install_path
+    ...localPath !== void 0 ? { install_path: localPath } : { install_path: null, recorded_path: response.installation.install_path }
   };
 }
-async function findInstallation2(client, skill) {
+async function findInstallation2(client, skill, command) {
   const { installations } = await client.request("GET", "/v1/installations", installationsSchema);
-  const installation = installations.find((candidate) => candidate.skill.name === skill);
+  const matches = installations.filter((candidate) => candidate.skill.name === skill);
+  const [installation] = matches;
   if (!installation) throw new Error(`No installation found for skill "${skill}".`);
-  return installation;
+  if (matches.length > 1) {
+    throw new Error(
+      `Several installations of "${skill}" exist; ${command} stopped. Mica cannot choose one of them safely.`
+    );
+  }
+  return { installation, installations };
 }
 async function verifyDirectory(inputPath, absolutePath) {
   let details;
@@ -47146,9 +47275,10 @@ var answerSchema = {
     };
   }
 };
-async function submitAnswer(client, questionId, choice) {
+async function submitAnswer(client, questionId, choice, connectedFolder) {
   return client.request("POST", `/v1/answers/${encodeURIComponent(questionId)}`, answerSchema, {
-    choice
+    choice,
+    ...connectedFolder !== void 0 && { connected_folder: connectedFolder }
   });
 }
 function isRecord9(value) {
@@ -47174,7 +47304,7 @@ function isRecord10(value) {
 }
 
 // src/post-command-notices.ts
-async function mergePostCommandNotices(envelope, client) {
+async function mergePostCommandNotices(envelope, client, scope = createInstallPathScope()) {
   try {
     const open = await fetchOpenQuestions(client);
     envelope.questions = open.questions;
@@ -47184,8 +47314,18 @@ async function mergePostCommandNotices(envelope, client) {
   try {
     const { installations } = await client.request("GET", "/v1/installations", installationsSchema);
     for (const installation of installations) {
+      const localPath = scope.toLocal(installation.install_path);
+      if (localPath === void 0) {
+        const notice2 = `${installation.skill.name} is recorded at ${installation.install_path}, outside the selected connected folder. Relink it to its directory in this folder.`;
+        if (envelope.command !== "status" || !envelope.ok) {
+          envelope.say_to_user = envelope.say_to_user ? `${envelope.say_to_user}
+${notice2}` : notice2;
+        }
+        appendNextAction(envelope, `relink ${installation.skill.name} <path>`);
+        continue;
+      }
       if (installation.state !== "detached") continue;
-      const notice = `${installation.skill.name} is detached from ${installation.install_path}. Relink it, restore its baseline, or uninstall it.`;
+      const notice = `${installation.skill.name} is detached from ${localPath}. Relink it, restore its baseline, or uninstall it.`;
       envelope.say_to_user = envelope.say_to_user ? `${envelope.say_to_user}
 ${notice}` : notice;
       appendNextAction(envelope, `relink ${installation.skill.name} <path>`);
@@ -47212,7 +47352,22 @@ function appendNextAction(envelope, action) {
 
 // src/main.ts
 (0, import_undici4.setGlobalDispatcher)(new import_undici4.EnvHttpProxyAgent());
-var program2 = new Command("mica").option("--json", "emit the machine-readable envelope");
+var program2 = new Command("mica").option("--json", "emit the machine-readable envelope").option(
+  "--connected-folder <host-root>",
+  "record install paths under this host root; the working directory is its current mount"
+);
+function installPathScope() {
+  return createInstallPathScope(program2.opts().connectedFolder);
+}
+async function mergePostCommandNotices2(envelope, client) {
+  let scope;
+  try {
+    scope = installPathScope();
+  } catch {
+    scope = createInstallPathScope();
+  }
+  await mergePostCommandNotices(envelope, client, scope);
+}
 var loginCommand = program2.command("login").option("--local", "write credentials to ./.mica instead of ~/.mica").option("--email <email>", "the email address to connect").option("--code <code>", "the code the verification page showed").action(async () => {
   const scope = loginCommand.opts().local ? "local" : void 0;
   const email3 = loginCommand.opts().email;
@@ -47262,7 +47417,10 @@ var snapshotCommand = program2.command("snapshot").option("--intent <goal>", "st
   const client = createApiClient();
   try {
     const intent = snapshotCommand.opts().intent;
-    const scan = await runSnapshotScan(client, { ...intent !== void 0 && { intent } });
+    const scan = await runSnapshotScan(client, {
+      scope: installPathScope(),
+      ...intent !== void 0 && { intent }
+    });
     const warningLines = scan.skippedSymlinks.map(
       (symlink) => `Warning: skipped symlink ${symlink.path} in installation ${symlink.installation_id} at ${symlink.install_path}.`
     );
@@ -47281,7 +47439,7 @@ var snapshotCommand = program2.command("snapshot").option("--intent <goal>", "st
       questions: [],
       next_actions: []
     };
-    await mergePostCommandNotices(envelope, client);
+    await mergePostCommandNotices2(envelope, client);
   } catch (error51) {
     envelope = {
       ok: false,
@@ -47291,7 +47449,7 @@ var snapshotCommand = program2.command("snapshot").option("--intent <goal>", "st
       questions: [],
       next_actions: []
     };
-    await mergePostCommandNotices(envelope, client);
+    await mergePostCommandNotices2(envelope, client);
   }
   process.exitCode = emit(envelope, { json: program2.opts().json });
 });
@@ -47300,17 +47458,26 @@ var answerCommand = program2.command("answer <question_id>").requiredOption("--c
   let envelope;
   const client = createApiClient();
   try {
-    await runSnapshotScan(client, {});
-    const result = await submitAnswer(client, questionId, choice);
+    const scope = installPathScope();
+    await runSnapshotScan(client, { scope });
+    const result = await submitAnswer(client, questionId, choice, scope.connectedFolder);
     const sayLines = [`Question ${result.question_id} is now ${result.status}.`];
     if (result.files !== void 0 && result.install_path !== void 0) {
+      const localPath = scope.toLocal(result.install_path);
+      if (localPath === void 0) {
+        throw new Error(
+          `The answer's files belong to ${result.install_path}, outside the selected connected folder; nothing was written.`
+        );
+      }
+      await scope.assertInsideMount(localPath);
+      result.install_path = localPath;
       if (result.manifest !== void 0) {
-        await applyFiles(result.install_path, result.files, result.manifest);
+        await applyFiles(localPath, result.files, result.manifest);
       } else {
-        await writeReturnedFiles(result.install_path, result.files, result.deleted ?? []);
+        await writeReturnedFiles(localPath, result.files, result.deleted ?? []);
       }
       const paths = result.files.map((file2) => file2.path).join(", ");
-      sayLines.push(`Wrote ${paths} to ${result.install_path}.`);
+      sayLines.push(`Wrote ${paths} to ${localPath}.`);
     }
     envelope = {
       ok: true,
@@ -47320,17 +47487,17 @@ var answerCommand = program2.command("answer <question_id>").requiredOption("--c
       questions: [],
       next_actions: []
     };
-    await mergePostCommandNotices(envelope, client);
+    await mergePostCommandNotices2(envelope, client);
   } catch (error51) {
     envelope = {
       ok: false,
       command: "answer",
       result: null,
-      say_to_user: error51.message,
+      say_to_user: error51 instanceof ApiError ? namedApiErrorMessage(error51) : error51.message,
       questions: [],
       next_actions: []
     };
-    await mergePostCommandNotices(envelope, client);
+    await mergePostCommandNotices2(envelope, client);
   }
   process.exitCode = emit(envelope, { json: program2.opts().json });
 });
@@ -47338,7 +47505,7 @@ program2.command("install <skill>").action(async (skill) => {
   let envelope;
   const client = createApiClient();
   try {
-    const result = await runInstall(client, { skill });
+    const result = await runInstall(client, { skill, scope: installPathScope() });
     const securityLines = result.security_flags.map(
       (flag) => `Security ${flag.severity} (${flag.source}): ${flag.explanation}${flag.pass_status === "failed" ? " (security pass failed)" : ""}`
     );
@@ -47372,7 +47539,7 @@ program2.command("install <skill>").action(async (skill) => {
       questions: result.questions,
       next_actions: []
     };
-    await mergePostCommandNotices(envelope, client);
+    await mergePostCommandNotices2(envelope, client);
   } catch (error51) {
     envelope = {
       ok: false,
@@ -47382,7 +47549,7 @@ program2.command("install <skill>").action(async (skill) => {
       questions: [],
       next_actions: []
     };
-    await mergePostCommandNotices(envelope, client);
+    await mergePostCommandNotices2(envelope, client);
   }
   process.exitCode = emit(envelope, { json: program2.opts().json });
 });
@@ -47390,7 +47557,7 @@ program2.command("publish <path>").action(async (path2) => {
   let envelope;
   const client = createApiClient();
   try {
-    const result = await runPublish(client, { path: path2 });
+    const result = await runPublish(client, { path: path2, scope: installPathScope() });
     const publishLine = result.revision_number === 1 ? `Published ${result.skill_name} revision 1 (new skill).` : `Published ${result.skill_name} revision ${result.revision_number}.`;
     const trackingLine = `Now tracking ${result.install_path}.`;
     const warningLines = result.warnings.map((warning) => `Warning: ${warning}`);
@@ -47425,7 +47592,7 @@ program2.command("publish <path>").action(async (path2) => {
       questions: [],
       next_actions: []
     };
-    await mergePostCommandNotices(envelope, client);
+    await mergePostCommandNotices2(envelope, client);
   } catch (error51) {
     envelope = {
       ok: false,
@@ -47435,7 +47602,7 @@ program2.command("publish <path>").action(async (path2) => {
       questions: [],
       next_actions: []
     };
-    await mergePostCommandNotices(envelope, client);
+    await mergePostCommandNotices2(envelope, client);
   }
   process.exitCode = emit(envelope, { json: program2.opts().json });
 });
@@ -47443,11 +47610,16 @@ program2.command("status").action(async () => {
   let envelope;
   const client = createApiClient();
   try {
-    const result = await runStatus(client);
+    const result = await runStatus(client, { scope: installPathScope() });
+    const nextActions = /* @__PURE__ */ new Set();
     const lines = result.installations.map((installation) => {
+      const owner = installation.owner ? " (owner)" : "";
+      if (installation.install_path === null) {
+        nextActions.add(`relink ${installation.skill_name} <path>`);
+        return `${installation.skill_name}${owner} is recorded at ${installation.recorded_path}, outside the selected connected folder. Relink it to its directory in this folder.`;
+      }
       const condition = installation.state === "detached" ? "detached" : installation.drifted ? "drifted from baseline" : "matches baseline";
       const mismatch = installation.name_mismatch ? " Warning: the directory basename does not match the skill name." : "";
-      const owner = installation.owner ? " (owner)" : "";
       return `${installation.skill_name}${owner} at ${installation.install_path}: ${condition}.${mismatch}`;
     });
     const contributionLines = result.contributions.map(
@@ -47460,9 +47632,9 @@ program2.command("status").action(async () => {
       result,
       say_to_user: combinedLines.length > 0 ? combinedLines.join("\n") : "No installations.",
       questions: [],
-      next_actions: []
+      next_actions: [...nextActions]
     };
-    await mergePostCommandNotices(envelope, client);
+    await mergePostCommandNotices2(envelope, client);
   } catch (error51) {
     envelope = {
       ok: false,
@@ -47472,7 +47644,7 @@ program2.command("status").action(async () => {
       questions: [],
       next_actions: []
     };
-    await mergePostCommandNotices(envelope, client);
+    await mergePostCommandNotices2(envelope, client);
   }
   process.exitCode = emit(envelope, { json: program2.opts().json });
 });
@@ -47480,7 +47652,7 @@ program2.command("revert").action(async () => {
   let envelope;
   const client = createApiClient();
   try {
-    const run = await runRevert(client);
+    const run = await runRevert(client, { scope: installPathScope() });
     const lines = run.installations.map(
       (installation) => `Restored ${installation.skill_name} at ${installation.install_path}.`
     );
@@ -47492,7 +47664,7 @@ program2.command("revert").action(async () => {
       questions: [],
       next_actions: []
     };
-    await mergePostCommandNotices(envelope, client);
+    await mergePostCommandNotices2(envelope, client);
   } catch (error51) {
     envelope = {
       ok: false,
@@ -47502,7 +47674,7 @@ program2.command("revert").action(async () => {
       questions: [],
       next_actions: []
     };
-    await mergePostCommandNotices(envelope, client);
+    await mergePostCommandNotices2(envelope, client);
   }
   process.exitCode = emit(envelope, { json: program2.opts().json });
 });
@@ -47510,7 +47682,7 @@ program2.command("relink <skill> <path>").action(async (skill, path2) => {
   let envelope;
   const client = createApiClient();
   try {
-    const result = await runRelink(client, { skill, path: path2 });
+    const result = await runRelink(client, { skill, path: path2, scope: installPathScope() });
     const lines = [`Relinked ${result.skill_name} at ${result.install_path}.`];
     if (result.name_mismatch) {
       lines.push("Warning: the relinked directory name does not match the skill name.");
@@ -47523,7 +47695,7 @@ program2.command("relink <skill> <path>").action(async (skill, path2) => {
       questions: [],
       next_actions: []
     };
-    await mergePostCommandNotices(envelope, client);
+    await mergePostCommandNotices2(envelope, client);
   } catch (error51) {
     envelope = {
       ok: false,
@@ -47533,7 +47705,7 @@ program2.command("relink <skill> <path>").action(async (skill, path2) => {
       questions: [],
       next_actions: []
     };
-    await mergePostCommandNotices(envelope, client);
+    await mergePostCommandNotices2(envelope, client);
   }
   process.exitCode = emit(envelope, { json: program2.opts().json });
 });
@@ -47541,7 +47713,7 @@ program2.command("restore <skill>").action(async (skill) => {
   let envelope;
   const client = createApiClient();
   try {
-    const result = await runRestore(client, { skill });
+    const result = await runRestore(client, { skill, scope: installPathScope() });
     envelope = {
       ok: true,
       command: "restore",
@@ -47550,7 +47722,7 @@ program2.command("restore <skill>").action(async (skill) => {
       questions: [],
       next_actions: []
     };
-    await mergePostCommandNotices(envelope, client);
+    await mergePostCommandNotices2(envelope, client);
   } catch (error51) {
     envelope = {
       ok: false,
@@ -47560,7 +47732,7 @@ program2.command("restore <skill>").action(async (skill) => {
       questions: [],
       next_actions: []
     };
-    await mergePostCommandNotices(envelope, client);
+    await mergePostCommandNotices2(envelope, client);
   }
   process.exitCode = emit(envelope, { json: program2.opts().json });
 });
@@ -47568,16 +47740,16 @@ program2.command("uninstall <skill>").action(async (skill) => {
   let envelope;
   const client = createApiClient();
   try {
-    const result = await runUninstall(client, { skill });
+    const result = await runUninstall(client, { skill, scope: installPathScope() });
     envelope = {
       ok: true,
       command: "uninstall",
       result,
-      say_to_user: `Tracking for ${result.skill_name} was removed. Local files were kept at ${result.install_path}.`,
+      say_to_user: result.install_path !== null ? `Tracking for ${result.skill_name} was removed. Local files were kept at ${result.install_path}.` : `Tracking for ${result.skill_name} was removed. Local files were not changed.`,
       questions: [],
       next_actions: []
     };
-    await mergePostCommandNotices(envelope, client);
+    await mergePostCommandNotices2(envelope, client);
   } catch (error51) {
     envelope = {
       ok: false,
@@ -47587,7 +47759,7 @@ program2.command("uninstall <skill>").action(async (skill) => {
       questions: [],
       next_actions: []
     };
-    await mergePostCommandNotices(envelope, client);
+    await mergePostCommandNotices2(envelope, client);
   }
   process.exitCode = emit(envelope, { json: program2.opts().json });
 });
@@ -47595,7 +47767,10 @@ program2.command("update [skill]").action(async (skill) => {
   let envelope;
   const client = createApiClient();
   try {
-    const run = await runUpdate(client, { ...skill !== void 0 && { skill } });
+    const run = await runUpdate(client, {
+      scope: installPathScope(),
+      ...skill !== void 0 && { skill }
+    });
     const lines = run.results.map(
       (installationResult) => installationResult.changed ? `Updated ${installationResult.skill_name}${installationResult.conflict_count > 0 ? ` (${installationResult.conflict_count} conflict${installationResult.conflict_count === 1 ? "" : "s"})` : ""}: ${installationResult.summary}` : `${installationResult.skill_name} is already up to date (baseline).`
     );
@@ -47607,7 +47782,7 @@ program2.command("update [skill]").action(async (skill) => {
       questions: run.questions,
       next_actions: []
     };
-    await mergePostCommandNotices(envelope, client);
+    await mergePostCommandNotices2(envelope, client);
   } catch (error51) {
     envelope = {
       ok: false,
@@ -47617,7 +47792,7 @@ program2.command("update [skill]").action(async (skill) => {
       questions: [],
       next_actions: []
     };
-    await mergePostCommandNotices(envelope, client);
+    await mergePostCommandNotices2(envelope, client);
   }
   process.exitCode = emit(envelope, { json: program2.opts().json });
 });
@@ -47628,6 +47803,7 @@ var contributeCommand = program2.command("contribute <skill>").option("--intents
     const opts = contributeCommand.opts();
     const result = await runContribute(client, {
       skill,
+      scope: installPathScope(),
       ...opts.intents !== void 0 && { intents: opts.intents },
       ...opts.unattributed !== void 0 && { unattributed: opts.unattributed },
       ...opts.all !== void 0 && { all: opts.all }
@@ -47700,7 +47876,7 @@ var contributeCommand = program2.command("contribute <skill>").option("--intents
       questions,
       next_actions: nextActions
     };
-    await mergePostCommandNotices(envelope, client);
+    await mergePostCommandNotices2(envelope, client);
   } catch (error51) {
     envelope = {
       ok: false,
@@ -47710,7 +47886,7 @@ var contributeCommand = program2.command("contribute <skill>").option("--intents
       questions: [],
       next_actions: []
     };
-    await mergePostCommandNotices(envelope, client);
+    await mergePostCommandNotices2(envelope, client);
   }
   process.exitCode = emit(envelope, { json: program2.opts().json });
 });
