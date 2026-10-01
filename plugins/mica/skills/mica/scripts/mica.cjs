@@ -46584,7 +46584,7 @@ function contributeErrorMessage(error51) {
   if (code === "hunks_do_not_apply") {
     const paths = Array.isArray(body?.paths) ? body.paths.filter((path2) => typeof path2 === "string") : [];
     const pathList = paths.length > 0 ? paths.join(", ") : "the selected files";
-    return `hunks_do_not_apply: the selection's hunks do not apply cleanly against ${pathList} (stale context from an unselected sibling intent). Select the related intents together, or use --all.`;
+    return `hunks_do_not_apply: the selection's hunks do not apply cleanly against ${pathList} (stale context from an unselected sibling intent). Select the related intents together.`;
   }
   if (code === void 0) return error51.message;
   const detail = typeof body?.detail === "string" ? body.detail : void 0;

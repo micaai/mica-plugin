@@ -182,8 +182,7 @@ Choose the flags from what the user asked for:
 
 A successful call returns a confirm question (submit / cancel); relay it as
 usual. If a subset returns `hunks_do_not_apply`, an unselected intent
-changed the same lines: select the related intents together, or use
-`--all`.
+changed the same lines: select the related intents together.
 
 ## Connecting to Mica
 
