@@ -47507,6 +47507,64 @@ var answerCommand = program2.command("answer <question_id>").requiredOption("--c
   }
   process.exitCode = emit(envelope, { json: program2.opts().json });
 });
+function isRecord11(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+var searchSchema = {
+  parse(data) {
+    if (!isRecord11(data) || !Array.isArray(data.skills)) {
+      throw new Error("invalid search response");
+    }
+    return {
+      skills: data.skills.map((skill) => {
+        if (!isRecord11(skill) || typeof skill.name !== "string" || typeof skill.description !== "string" || skill.owner_name !== null && typeof skill.owner_name !== "string" || typeof skill.owner_email !== "string") {
+          throw new Error("invalid skill in search response");
+        }
+        return {
+          name: skill.name,
+          description: skill.description,
+          owner_name: skill.owner_name,
+          owner_email: skill.owner_email
+        };
+      })
+    };
+  }
+};
+program2.command("search [query...]").option("--owner <name>", "only skills whose owner name or email matches").action(async (query, options) => {
+  let envelope;
+  const client = createApiClient();
+  try {
+    const params = new URLSearchParams();
+    if (query.length > 0) params.set("q", query.join(" "));
+    if (options.owner !== void 0) params.set("owner", options.owner);
+    const path2 = `/v1/skills/search${params.size > 0 ? `?${params}` : ""}`;
+    const { skills } = await client.request("GET", path2, searchSchema);
+    envelope = {
+      ok: true,
+      command: "search",
+      result: { skills },
+      say_to_user: skills.length === 0 ? "No skills match." : skills.map(
+        (s) => [
+          s.name,
+          `owner ${s.owner_name ? `${s.owner_name} <${s.owner_email}>` : s.owner_email}`,
+          s.description
+        ].filter(Boolean).join(" \u2014 ")
+      ).join("\n"),
+      questions: [],
+      next_actions: skills.map((s) => `install ${s.name}`)
+    };
+  } catch (error51) {
+    envelope = {
+      ok: false,
+      command: "search",
+      result: null,
+      say_to_user: error51 instanceof ApiError ? namedApiErrorMessage(error51) : error51.message,
+      questions: [],
+      next_actions: []
+    };
+  }
+  process.exitCode = emit(envelope, { json: program2.opts().json });
+});
 program2.command("install <skill>").action(async (skill) => {
   let envelope;
   const client = createApiClient();

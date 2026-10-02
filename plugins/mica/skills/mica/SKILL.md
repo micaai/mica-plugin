@@ -1,6 +1,6 @@
 ---
 name: mica
-description: Use when editing, personalizing, installing, sharing, updating, or contributing changes to agent skills in Claude Code or a Cowork connected folder. Use when the user edits a skill, asks to install or update one, or wants to share an improvement with its owner. Snapshots skill edits and manages updates and contributions through the mica CLI.
+description: Use when editing, personalizing, installing, sharing, updating, or contributing changes to agent skills in Claude Code or a Cowork connected folder. Use when the user edits a skill, asks to find, install, or update one, or wants to share an improvement with its owner. Snapshots skill edits and manages updates and contributions through the mica CLI.
 allowed-tools: Bash(node ${CLAUDE_SKILL_DIR}/scripts/mica.cjs *)
 ---
 
@@ -131,8 +131,9 @@ After ANY edit to a file under a tracked skill directory
 through the runner. In Cowork, `$CLAUDE_CONFIG_DIR` is the selected connected
 folder; snapshot after each edit because a hook may not run there.
 
-Every Mica command snapshots all installations first. This does not bypass
-the Cowork delete policy. When in doubt, snapshot.
+Every Mica command except `login` and `search` snapshots all
+installations first. This does not bypass the Cowork delete
+policy. When in doubt, snapshot.
 
 ## How to phrase `--intent`
 
@@ -244,8 +245,25 @@ Commands may return `questions` — server-held pending questions, each with a
 Pending questions survive interruption: an unanswered question reappears on
 the next command until it is answered.
 
+## Find a skill to install
+
+If the user names a skill but you do not know its exact name, search first:
+`search <words> [--owner <name>]`.
+
+`search` matches each word against skill names and descriptions in the
+user's organization. `--owner` matches the owner's name or email; pass the
+name without "'s". For "install Bob's code review skill", run
+`search code review --owner Bob`. Each result line starts with the skill
+name to pass to `install <skill>`.
+
+If one skill matches, install it. If more than one matches, show the list and
+ask the user which one to install. If none match, search with fewer words, or
+run `search` with no arguments to list every skill.
+
 ## Other commands
 
+- `search [<words>...] [--owner <name>]` — find a skill's exact name
+  by words in its name or description, or by its owner.
 - `install <skill>` — create an installation of a skill from its trunk.
 - `update [<skill>]` — merge the trunk's latest revision into an
   installation, preserving personalization.
