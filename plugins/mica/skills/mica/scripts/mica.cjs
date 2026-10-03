@@ -45411,7 +45411,6 @@ var QUESTION_KINDS = [
   "inferred_intent",
   "adoption",
   "detached",
-  "rule11",
   "publish_flags",
   "contribute_confirm"
 ];
@@ -45422,7 +45421,6 @@ var CONFLICT_CHOICE_IDS = [
   "edited"
 ];
 var SEMANTIC_FLAG_CHOICE_IDS = ["dismiss", "edited"];
-var RULE11_CHOICE_IDS = SEMANTIC_FLAG_CHOICE_IDS;
 var INTENT_CHOICE_IDS = ["confirmed", "denied", "skipped"];
 var ADOPTION_CHOICE_IDS = ["adopt", "overwrite"];
 var DETACHED_CHOICE_IDS = ["relink", "restore", "uninstall"];
@@ -45434,7 +45432,6 @@ var KIND_CHOICES = {
   inferred_intent: INTENT_CHOICE_IDS,
   adoption: ADOPTION_CHOICE_IDS,
   detached: DETACHED_CHOICE_IDS,
-  rule11: RULE11_CHOICE_IDS,
   publish_flags: PUBLISH_FLAG_CHOICE_IDS,
   contribute_confirm: CONTRIBUTE_CONFIRM_CHOICE_IDS
 };
@@ -45966,6 +45963,7 @@ async function applyFiles(installPath, files, expectedManifest) {
   await assertNoSymlinkComponents(destination, (0, import_node_path5.dirname)(destination));
   await (0, import_promises5.mkdir)((0, import_node_path5.dirname)(destination), { recursive: true });
   await assertNoSymlinkComponents(destination, (0, import_node_path5.dirname)(destination));
+  await removeLeftoverSiblings((0, import_node_path5.dirname)(destination));
   let stagePath;
   let backupPath;
   let movedDestination = false;
@@ -46160,6 +46158,17 @@ async function createTemporarySibling(parent, prefix) {
   } catch (error51) {
     await removeBestEffort(path2);
     throw error51;
+  }
+}
+async function removeLeftoverSiblings(parent) {
+  try {
+    const entries = await (0, import_promises5.readdir)(parent);
+    for (const name of entries) {
+      if (name.startsWith(".mica-stage-") || name.startsWith(".mica-backup-")) {
+        await (0, import_promises5.rm)((0, import_node_path5.join)(parent, name), { recursive: true, force: true }).catch(() => void 0);
+      }
+    }
+  } catch {
   }
 }
 async function removeBestEffort(path2) {
@@ -46395,7 +46404,8 @@ function isRecord2(value) {
 function parseInstallation(value) {
   if (!isRecord2(value)) throw new Error("invalid installation response");
   const skill = value.skill;
-  if (typeof value.id !== "string" || typeof value.install_path !== "string" || value.state !== "active" && value.state !== "detached" || typeof value.owner !== "boolean" || typeof value.baseline_manifest_hash !== "string" || !isRecord2(skill) || typeof skill.id !== "string" || typeof skill.name !== "string") {
+  const trackedRevision = value.tracked_revision;
+  if (typeof value.id !== "string" || typeof value.install_path !== "string" || value.state !== "active" && value.state !== "detached" || typeof value.owner !== "boolean" || typeof value.baseline_manifest_hash !== "string" || !isRecord2(skill) || typeof skill.id !== "string" || typeof skill.name !== "string" || !isRecord2(trackedRevision) || typeof trackedRevision.id !== "string" || typeof trackedRevision.number !== "number") {
     throw new Error("invalid installation response");
   }
   return {
@@ -46404,7 +46414,8 @@ function parseInstallation(value) {
     state: value.state,
     owner: value.owner,
     baseline_manifest_hash: value.baseline_manifest_hash,
-    skill: { id: skill.id, name: skill.name }
+    skill: { id: skill.id, name: skill.name },
+    tracked_revision: { id: trackedRevision.id, number: trackedRevision.number }
   };
 }
 
@@ -46647,7 +46658,151 @@ function isRecord3(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
+// src/revert.ts
+var treeFilesSchema = {
+  parse(data) {
+    if (!isRecord4(data) || typeof data.installation_id !== "string" || typeof data.install_path !== "string" || !Array.isArray(data.manifest) || !Array.isArray(data.files)) {
+      throw new Error("invalid files response");
+    }
+    let manifest;
+    let files;
+    try {
+      manifest = parseManifest(data.manifest);
+      files = parseReturnedFiles(data.files);
+    } catch {
+      throw new Error("invalid files response");
+    }
+    return {
+      installation_id: data.installation_id,
+      install_path: data.install_path,
+      manifest,
+      files
+    };
+  }
+};
+var snapshotHistorySchema = {
+  parse(data) {
+    if (!isRecord4(data) || typeof data.installation_id !== "string" || !Array.isArray(data.snapshots)) {
+      throw new Error("invalid snapshot history response");
+    }
+    const snapshots = [];
+    for (const snapshot of data.snapshots) {
+      if (!isRecord4(snapshot) || typeof snapshot.id !== "string" || typeof snapshot.taken_at !== "string" || typeof snapshot.manifest_hash !== "string") {
+        throw new Error("invalid snapshot history response");
+      }
+      snapshots.push({
+        id: snapshot.id,
+        taken_at: snapshot.taken_at,
+        manifest_hash: snapshot.manifest_hash
+      });
+    }
+    return {
+      installation_id: data.installation_id,
+      snapshots
+    };
+  }
+};
+async function fetchSnapshotHistory(client, installationId) {
+  const response = await client.request(
+    "GET",
+    `/v1/installations/${encodeURIComponent(installationId)}/snapshots`,
+    snapshotHistorySchema
+  );
+  return response.snapshots;
+}
+async function restoreTree(client, installation, localPath, at, snapshotHash) {
+  const query = `at=${encodeURIComponent(at)}`;
+  const response = await client.request(
+    "GET",
+    `/v1/installations/${encodeURIComponent(installation.id)}/files?${query}`,
+    treeFilesSchema
+  );
+  confirmInstallation(installation, response);
+  if (snapshotHash !== void 0) {
+    const actualHash = manifestHash(response.manifest);
+    if (actualHash !== snapshotHash) {
+      throw new Error("snapshot manifest hash mismatch");
+    }
+  }
+  await applyFiles(localPath, response.files, response.manifest);
+  return {
+    installation_id: installation.id,
+    skill_name: installation.skill.name,
+    install_path: localPath
+  };
+}
+async function restoreBaseline(client, installation, localPath) {
+  return restoreTree(client, installation, localPath, "baseline");
+}
+async function runRevert(client, options = {}) {
+  const scope = options.scope ?? createInstallPathScope();
+  await runSnapshotScan(client, { scope });
+  const { installations } = await client.request("GET", "/v1/installations", installationsSchema);
+  const restored = [];
+  for (const installation of installations) {
+    if (installation.state !== "active") continue;
+    const localPath = scope.toLocal(installation.install_path);
+    if (localPath === void 0) continue;
+    await scope.assertInsideMount(localPath);
+    restored.push(await restoreBaseline(client, installation, localPath));
+  }
+  return { restored: restored.length, installations: restored };
+}
+async function runRevertTo(client, snapshotId, options = {}) {
+  const scope = options.scope ?? createInstallPathScope();
+  await runSnapshotScan(client, { scope });
+  const { installations } = await client.request("GET", "/v1/installations", installationsSchema);
+  let owningInstallation;
+  let snapshotInfo;
+  for (const installation of installations) {
+    const history = await fetchSnapshotHistory(client, installation.id);
+    const found = history.find((s) => s.id === snapshotId);
+    if (found) {
+      owningInstallation = installation;
+      snapshotInfo = found;
+      break;
+    }
+  }
+  if (!owningInstallation || !snapshotInfo) {
+    throw new Error(`snapshot not found: ${snapshotId}`);
+  }
+  if (owningInstallation.state !== "active") {
+    throw new Error(
+      `${owningInstallation.skill.name} is detached; run restore or relink before revert --to.`
+    );
+  }
+  const localPath = scope.toLocal(owningInstallation.install_path);
+  if (localPath === void 0) {
+    throw new Error(
+      `${owningInstallation.skill.name} is recorded at ${owningInstallation.install_path}, outside the selected connected folder; relink it before revert --to.`
+    );
+  }
+  await scope.assertInsideMount(localPath);
+  const result = await restoreTree(
+    client,
+    owningInstallation,
+    localPath,
+    snapshotId,
+    snapshotInfo.manifest_hash
+  );
+  return { restored: 1, installations: [result], snapshot_id: snapshotId };
+}
+function confirmInstallation(requested, returned) {
+  if (returned.installation_id !== requested.id || returned.install_path !== requested.install_path) {
+    throw new Error("invalid files response");
+  }
+}
+function isRecord4(value) {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
 // src/status.ts
+async function withHistory(client, installationId, installation, includeHistory) {
+  if (includeHistory) {
+    installation.history = await fetchSnapshotHistory(client, installationId);
+  }
+  return installation;
+}
 async function runStatus(client, options = {}) {
   const scope = options.scope ?? createInstallPathScope();
   await runSnapshotScan(client, { scope });
@@ -46655,8 +46810,9 @@ async function runStatus(client, options = {}) {
   const status = [];
   for (const installation of installations) {
     const localPath = scope.toLocal(installation.install_path);
+    let statusInstallation;
     if (localPath === void 0) {
-      status.push({
+      statusInstallation = {
         installation_id: installation.id,
         skill_name: installation.skill.name,
         install_path: null,
@@ -46665,32 +46821,32 @@ async function runStatus(client, options = {}) {
         owner: installation.owner,
         drifted: null,
         name_mismatch: (0, import_node_path8.basename)(installation.install_path) !== installation.skill.name
-      });
-      continue;
-    }
-    const nameMismatch = (0, import_node_path8.basename)(localPath) !== installation.skill.name;
-    if (installation.state === "detached") {
-      status.push({
+      };
+    } else if (installation.state === "detached") {
+      statusInstallation = {
         installation_id: installation.id,
         skill_name: installation.skill.name,
         install_path: localPath,
         state: "detached",
         owner: installation.owner,
         drifted: null,
-        name_mismatch: nameMismatch
-      });
-      continue;
+        name_mismatch: (0, import_node_path8.basename)(localPath) !== installation.skill.name
+      };
+    } else {
+      const { manifest } = await collectManifest(localPath);
+      statusInstallation = {
+        installation_id: installation.id,
+        skill_name: installation.skill.name,
+        install_path: localPath,
+        state: "active",
+        owner: installation.owner,
+        drifted: manifestHash(manifest) !== installation.baseline_manifest_hash,
+        name_mismatch: (0, import_node_path8.basename)(localPath) !== installation.skill.name
+      };
     }
-    const { manifest } = await collectManifest(localPath);
-    status.push({
-      installation_id: installation.id,
-      skill_name: installation.skill.name,
-      install_path: localPath,
-      state: "active",
-      owner: installation.owner,
-      drifted: manifestHash(manifest) !== installation.baseline_manifest_hash,
-      name_mismatch: nameMismatch
-    });
+    status.push(
+      await withHistory(client, installation.id, statusInstallation, options.history ?? false)
+    );
   }
   const contributions = await fetchContributions(client);
   return {
@@ -46707,7 +46863,7 @@ async function runStatus(client, options = {}) {
 // src/update.ts
 var updateResponseSchema = {
   parse(data) {
-    if (!isRecord4(data) || typeof data.changed !== "boolean") {
+    if (!isRecord5(data) || typeof data.changed !== "boolean") {
       throw new Error("invalid update response");
     }
     if (!data.changed) {
@@ -46716,11 +46872,10 @@ var updateResponseSchema = {
         files: [],
         manifest: [],
         summary: "",
-        questions: [],
         conflict_count: 0
       };
     }
-    if (!Array.isArray(data.files) || !Array.isArray(data.manifest) || typeof data.summary !== "string" || !Array.isArray(data.questions) || typeof data.conflict_count !== "number") {
+    if (!Array.isArray(data.files) || !Array.isArray(data.manifest) || typeof data.summary !== "string" || typeof data.conflict_count !== "number") {
       throw new Error("invalid update response");
     }
     let files;
@@ -46736,7 +46891,6 @@ var updateResponseSchema = {
       files,
       manifest,
       summary: data.summary,
-      questions: data.questions.map((question) => questionSchema.parse(question)),
       conflict_count: data.conflict_count
     };
   }
@@ -46759,7 +46913,6 @@ async function runUpdate(client, options = {}) {
     );
   }
   const results = [];
-  const questionsById = /* @__PURE__ */ new Map();
   for (const { installation, localPath } of resolved) {
     await scope.assertInsideMount(localPath);
     const response = await client.request(
@@ -46773,14 +46926,12 @@ async function runUpdate(client, options = {}) {
         installation_id: installation.id,
         skill_name: installation.skill.name,
         changed: false,
-        conflict_count: 0
+        conflict_count: 0,
+        revision_number: installation.tracked_revision.number
       });
       continue;
     }
     await applyFiles(localPath, response.files, response.manifest);
-    for (const question of response.questions) {
-      questionsById.set(question.question_id, question);
-    }
     results.push({
       installation_id: installation.id,
       skill_name: installation.skill.name,
@@ -46789,77 +46940,20 @@ async function runUpdate(client, options = {}) {
       conflict_count: response.conflict_count
     });
   }
+  if (results.some((result) => result.changed)) {
+    await runSnapshotScan(client, { scope });
+  }
   const updated = results.filter((result) => result.changed).length;
   return {
     updated,
     unchanged: results.length - updated,
-    results,
-    questions: [...questionsById.values()]
+    results
   };
 }
 function selectInstallations(installations, skill) {
   const active = installations.filter((installation) => installation.state === "active");
   if (skill === void 0) return active;
   return active.filter((installation) => installation.skill.name === skill);
-}
-function isRecord4(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
-// src/revert.ts
-var baselineFilesSchema = {
-  parse(data) {
-    if (!isRecord5(data) || typeof data.installation_id !== "string" || typeof data.install_path !== "string" || !Array.isArray(data.manifest) || !Array.isArray(data.files)) {
-      throw new Error("invalid baseline files response");
-    }
-    let manifest;
-    let files;
-    try {
-      manifest = parseManifest(data.manifest);
-      files = parseReturnedFiles(data.files);
-    } catch {
-      throw new Error("invalid baseline files response");
-    }
-    return {
-      installation_id: data.installation_id,
-      install_path: data.install_path,
-      manifest,
-      files
-    };
-  }
-};
-async function restoreBaseline(client, installation, localPath) {
-  const response = await client.request(
-    "GET",
-    `/v1/installations/${encodeURIComponent(installation.id)}/files?at=baseline`,
-    baselineFilesSchema
-  );
-  confirmInstallation(installation, response);
-  await applyFiles(localPath, response.files, response.manifest);
-  return {
-    installation_id: installation.id,
-    skill_name: installation.skill.name,
-    install_path: localPath
-  };
-}
-async function runRevert(client, options = {}) {
-  const scope = options.scope ?? createInstallPathScope();
-  await runSnapshotScan(client, { scope });
-  const { installations } = await client.request("GET", "/v1/installations", installationsSchema);
-  const restored = [];
-  for (const installation of installations) {
-    if (installation.state !== "active") continue;
-    const localPath = scope.toLocal(installation.install_path);
-    if (localPath === void 0) continue;
-    await scope.assertInsideMount(localPath);
-    restored.push(await restoreBaseline(client, installation, localPath));
-  }
-  return { restored: restored.length, installations: restored };
-}
-function confirmInstallation(requested, returned) {
-  if (returned.installation_id !== requested.id || returned.install_path !== requested.install_path) {
-    throw new Error("invalid baseline files response");
-  }
 }
 function isRecord5(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -47302,8 +47396,7 @@ var questionsSchema = {
 };
 async function fetchOpenQuestions(client) {
   const { questions } = await client.request("GET", "/v1/questions", questionsSchema);
-  const next_actions = questions.filter((question) => question.options.length > 0).map((question) => `answer ${question.question_id} --choice ${question.options[0]?.id}`);
-  return { questions, next_actions };
+  return { questions };
 }
 function isRecord10(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -47314,7 +47407,6 @@ async function mergePostCommandNotices(envelope, client, scope = createInstallPa
   try {
     const open = await fetchOpenQuestions(client);
     envelope.questions = open.questions;
-    envelope.next_actions = [...envelope.next_actions, ...open.next_actions];
   } catch {
   }
   try {
@@ -47670,26 +47762,48 @@ program2.command("publish <path>").action(async (path2) => {
   }
   process.exitCode = emit(envelope, { json: program2.opts().json });
 });
-program2.command("status").action(async () => {
+program2.command("status").option("--history", "list snapshot ids for each installation, newest first").action(async (options) => {
   let envelope;
   const client = createApiClient();
   try {
-    const result = await runStatus(client, { scope: installPathScope() });
-    const nextActions = /* @__PURE__ */ new Set();
-    const lines = result.installations.map((installation) => {
+    let formatInstallationWithHistory2 = function(installation) {
       const owner = installation.owner ? " (owner)" : "";
+      let mainLine;
       if (installation.install_path === null) {
         nextActions.add(`relink ${installation.skill_name} <path>`);
-        return `${installation.skill_name}${owner} is recorded at ${installation.recorded_path}, outside the selected connected folder. Relink it to its directory in this folder.`;
+        mainLine = `${installation.skill_name}${owner} is recorded at ${installation.recorded_path}, outside the selected connected folder. Relink it to its directory in this folder.`;
+      } else {
+        const condition = installation.state === "detached" ? "detached" : installation.drifted ? "drifted from baseline" : "matches baseline";
+        const mismatch = installation.name_mismatch ? " Warning: the directory basename does not match the skill name." : "";
+        mainLine = `${installation.skill_name}${owner} at ${installation.install_path}: ${condition}.${mismatch}`;
       }
-      const condition = installation.state === "detached" ? "detached" : installation.drifted ? "drifted from baseline" : "matches baseline";
-      const mismatch = installation.name_mismatch ? " Warning: the directory basename does not match the skill name." : "";
-      return `${installation.skill_name}${owner} at ${installation.install_path}: ${condition}.${mismatch}`;
+      if (options.history && installation.history) {
+        if (installation.history.length > 0) {
+          const historyLines = installation.history.map(
+            (snap) => `  ${snap.id}  ${snap.taken_at}`
+          );
+          return [mainLine, ...historyLines].join("\n");
+        } else {
+          return `${mainLine}
+  No snapshots.`;
+        }
+      }
+      return mainLine;
+    };
+    var formatInstallationWithHistory = formatInstallationWithHistory2;
+    const result = await runStatus(client, {
+      scope: installPathScope(),
+      history: options.history === true
     });
+    const nextActions = /* @__PURE__ */ new Set();
+    const lines = result.installations.map(formatInstallationWithHistory2);
     const contributionLines = result.contributions.map(
       (contribution) => contribution.owner_note !== null ? `Contribution to ${contribution.skill_name}: ${contribution.state} \u2014 "${contribution.owner_note}"` : `Contribution to ${contribution.skill_name}: ${contribution.state}`
     );
     const combinedLines = [...lines, ...contributionLines];
+    if (options.history && result.installations.some((i) => i.history && i.history.length > 0)) {
+      nextActions.add("revert --to <snapshot>");
+    }
     envelope = {
       ok: true,
       command: "status",
@@ -47704,7 +47818,7 @@ program2.command("status").action(async () => {
       ok: false,
       command: "status",
       result: null,
-      say_to_user: error51.message,
+      say_to_user: error51 instanceof ApiError ? namedApiErrorMessage(error51) : error51.message,
       questions: [],
       next_actions: []
     };
@@ -47712,14 +47826,22 @@ program2.command("status").action(async () => {
   }
   process.exitCode = emit(envelope, { json: program2.opts().json });
 });
-program2.command("revert").action(async () => {
+program2.command("revert").option("--to <snapshot>", "restore the installation that owns this snapshot to that snapshot").action(async (options) => {
   let envelope;
   const client = createApiClient();
   try {
-    const run = await runRevert(client, { scope: installPathScope() });
-    const lines = run.installations.map(
-      (installation) => `Restored ${installation.skill_name} at ${installation.install_path}.`
-    );
+    let run;
+    if (options.to !== void 0) {
+      run = await runRevertTo(client, options.to, { scope: installPathScope() });
+    } else {
+      run = await runRevert(client, { scope: installPathScope() });
+    }
+    const lines = run.installations.map((installation) => {
+      if (options.to !== void 0 && run.snapshot_id !== void 0) {
+        return `Restored ${installation.skill_name} at ${installation.install_path} to snapshot ${run.snapshot_id}.`;
+      }
+      return `Restored ${installation.skill_name} at ${installation.install_path}.`;
+    });
     envelope = {
       ok: true,
       command: "revert",
@@ -47734,7 +47856,7 @@ program2.command("revert").action(async () => {
       ok: false,
       command: "revert",
       result: null,
-      say_to_user: error51.message,
+      say_to_user: error51 instanceof ApiError ? namedApiErrorMessage(error51) : error51.message,
       questions: [],
       next_actions: []
     };
@@ -47836,14 +47958,14 @@ program2.command("update [skill]").action(async (skill) => {
       ...skill !== void 0 && { skill }
     });
     const lines = run.results.map(
-      (installationResult) => installationResult.changed ? `Updated ${installationResult.skill_name}${installationResult.conflict_count > 0 ? ` (${installationResult.conflict_count} conflict${installationResult.conflict_count === 1 ? "" : "s"})` : ""}: ${installationResult.summary}` : `${installationResult.skill_name} is already up to date (baseline).`
+      (installationResult) => installationResult.changed ? `Updated ${installationResult.skill_name}${installationResult.conflict_count > 0 ? ` (${installationResult.conflict_count} conflict${installationResult.conflict_count === 1 ? "" : "s"})` : ""}: ${installationResult.summary}` : `${installationResult.skill_name} is already at revision ${installationResult.revision_number}.`
     );
     envelope = {
       ok: true,
       command: "update",
       result: { updated: run.updated, unchanged: run.unchanged },
       say_to_user: lines.length > 0 ? lines.join("\n") : "No installations to update.",
-      questions: run.questions,
+      questions: [],
       next_actions: []
     };
     await mergePostCommandNotices2(envelope, client);
