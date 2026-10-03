@@ -46034,8 +46034,8 @@ async function materializeStage(stagePath, files) {
     await (0, import_promises5.chmod)(absolute, file2.executable ? 493 : 420);
   }
 }
-async function verifyTree(stagePath, expected) {
-  const actual = await collectManifest(stagePath);
+async function verifyTree(root, expected) {
+  const actual = await collectManifest(root);
   const actualHash = manifestHash(actual.manifest);
   const expectedHash = manifestHash(expected);
   if (actualHash !== expectedHash) {
@@ -47024,7 +47024,11 @@ async function runInstall(client, options) {
   if (response.installation.install_path !== storedPath || response.installation.skill.name !== options.skill) {
     throw new Error("invalid installation response");
   }
-  if (local === null) await applyFiles(installPath, response.files, response.manifest);
+  if (local === null) {
+    validateCompleteResponse(response.files, response.manifest);
+    await writeReturnedFiles(installPath, response.files);
+    await verifyTree(installPath, response.manifest);
+  }
   let outcome;
   if (!existing) outcome = "installed";
   else if (response.questions.length > 0) outcome = "adoption_required";
