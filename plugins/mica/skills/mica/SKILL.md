@@ -175,8 +175,19 @@ Choose the flags from what the user asked for:
   the user and ask which intents to submit.
 
 A successful call returns a confirm question (submit / cancel); relay it as
-usual. If a subset returns `hunks_do_not_apply`, an unselected intent
-changed the same lines: select the related intents together.
+usual.
+
+A subset can return one or more blocking `merge_conflict` questions. Each
+question names the intent that the server adds and the file. The options are:
+
+- "Keep the trunk head's version": drops that intent's change in the file.
+- "Use my file for this path": sends your file as is, including other local
+  edits that the question text shows.
+- "Take suggested": the trunk head plus only that intent. This option is
+  present only when the server returns a suggestion.
+
+Relay the question text, including the suggested merge. Let the user choose.
+Do not answer for the user.
 
 ## Connecting to Mica
 

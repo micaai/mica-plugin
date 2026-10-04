@@ -46593,9 +46593,10 @@ function contributeErrorMessage(error51) {
   const body = isRecord3(error51.body) ? error51.body : void 0;
   const code = typeof body?.error === "string" ? body.error : void 0;
   if (code === "hunks_do_not_apply") {
+    const recordId = typeof body?.intent_record_id === "string" ? body.intent_record_id : "unknown";
     const paths = Array.isArray(body?.paths) ? body.paths.filter((path2) => typeof path2 === "string") : [];
     const pathList = paths.length > 0 ? paths.join(", ") : "the selected files";
-    return `hunks_do_not_apply: the selection's hunks do not apply cleanly against ${pathList} (stale context from an unselected sibling intent). Select the related intents together.`;
+    return `hunks_do_not_apply: intent_record_id ${recordId} has hunks that do not apply cleanly to its own base tree in ${pathList}.`;
   }
   if (code === void 0) return error51.message;
   const detail = typeof body?.detail === "string" ? body.detail : void 0;
