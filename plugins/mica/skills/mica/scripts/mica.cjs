@@ -46425,10 +46425,11 @@ var import_node_path8 = require("node:path");
 // src/contribute.ts
 var contributablesSchema = {
   parse(data) {
-    if (!isRecord3(data) || !Array.isArray(data.intents) || !isRecord3(data.cut_against_revision)) {
+    if (!isRecord3(data) || data.role !== "owner" && data.role !== "member" || !Array.isArray(data.intents) || !isRecord3(data.cut_against_revision)) {
       throw new Error("invalid contributables response");
     }
     return {
+      role: data.role,
       intents: data.intents.map(parseContributeIntent),
       unattributed: data.unattributed === null ? null : parseUnattributed(data.unattributed),
       cut_against_revision: parseRevisionRef(data.cut_against_revision)
@@ -46492,6 +46493,7 @@ async function runContribute(client, options) {
       mode: "list",
       installation_id: installation.id,
       skill_name: installation.skill.name,
+      role: contributables.role,
       intents: contributables.intents,
       unattributed: contributables.unattributed,
       cut_against_revision: contributables.cut_against_revision
@@ -47149,7 +47151,14 @@ async function runPublish(client, options) {
       ...scope.connectedFolder !== void 0 && { connected_folder: scope.connectedFolder }
     });
   } catch (error51) {
-    if (error51 instanceof ApiError) throw new Error(namedApiErrorMessage(error51));
+    if (error51 instanceof ApiError) {
+      if (isRecord7(error51.body) && error51.body.error === "skill_exists") {
+        throw new Error(
+          `${String(error51.body.skill)} already exists on the trunk. Use contribute to add a revision.`
+        );
+      }
+      throw new Error(namedApiErrorMessage(error51));
+    }
     throw error51;
   }
   if (response.installation.install_path !== storedPath) {
@@ -47346,8 +47355,13 @@ var answerSchema = {
     if (!isRecord9(data) || typeof data.question_id !== "string" || typeof data.status !== "string") {
       throw new Error("invalid answer response");
     }
+    const result = data.result === void 0 ? void 0 : parseResult(data.result);
     if (data.files === void 0 && data.install_path === void 0 && data.manifest === void 0) {
-      return { question_id: data.question_id, status: data.status };
+      return {
+        question_id: data.question_id,
+        status: data.status,
+        ...result !== void 0 && { result }
+      };
     }
     if (!Array.isArray(data.files) || typeof data.install_path !== "string") {
       throw new Error("invalid answer response");
@@ -47376,15 +47390,36 @@ var answerSchema = {
       files,
       ...manifest !== void 0 && { manifest },
       install_path: data.install_path,
-      ...deleted !== void 0 && { deleted }
+      ...deleted !== void 0 && { deleted },
+      ...result !== void 0 && { result }
     };
   }
 };
+function parseResult(value) {
+  if (isRecord9(value) && value.state === "pending") return { state: "pending" };
+  if (isRecord9(value) && value.state === "accepted" && typeof value.revision_number === "number" && typeof value.installation_advanced === "boolean") {
+    return {
+      state: "accepted",
+      revision_number: value.revision_number,
+      installation_advanced: value.installation_advanced
+    };
+  }
+  throw new Error("invalid answer response");
+}
 async function submitAnswer(client, questionId, choice, connectedFolder) {
-  return client.request("POST", `/v1/answers/${encodeURIComponent(questionId)}`, answerSchema, {
-    choice,
-    ...connectedFolder !== void 0 && { connected_folder: connectedFolder }
-  });
+  try {
+    return await client.request(
+      "POST",
+      `/v1/answers/${encodeURIComponent(questionId)}`,
+      answerSchema,
+      { choice, ...connectedFolder !== void 0 && { connected_folder: connectedFolder } }
+    );
+  } catch (error51) {
+    if (error51 instanceof ApiError && isRecord9(error51.body) && error51.body.error === "head_moved") {
+      throw new Error("The trunk moved while you confirmed. Run contribute again.");
+    }
+    throw error51;
+  }
 }
 function isRecord9(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -47565,6 +47600,16 @@ var answerCommand = program2.command("answer <question_id>").requiredOption("--c
     await runSnapshotScan(client, { scope });
     const result = await submitAnswer(client, questionId, choice, scope.connectedFolder);
     const sayLines = [`Question ${result.question_id} is now ${result.status}.`];
+    if (result.result?.state === "accepted") {
+      sayLines.push(`Revision ${result.result.revision_number} is live.`);
+      if (!result.result.installation_advanced) {
+        sayLines.push(
+          `Your copy is behind revision ${result.result.revision_number}; run update.`
+        );
+      }
+    } else if (result.result?.state === "pending") {
+      sayLines.push("Candidate submitted for review.");
+    }
     if (result.files !== void 0 && result.install_path !== void 0) {
       const localPath = scope.toLocal(result.install_path);
       if (localPath === void 0) {
@@ -47719,7 +47764,7 @@ program2.command("publish <path>").action(async (path2) => {
   const client = createApiClient();
   try {
     const result = await runPublish(client, { path: path2, scope: installPathScope() });
-    const publishLine = result.revision_number === 1 ? `Published ${result.skill_name} revision 1 (new skill).` : `Published ${result.skill_name} revision ${result.revision_number}.`;
+    const publishLine = `Published ${result.skill_name} revision 1 (new skill).`;
     const trackingLine = `Now tracking ${result.install_path}.`;
     const warningLines = result.warnings.map((warning) => `Warning: ${warning}`);
     const securityLines = result.security_flags.map(
@@ -48039,7 +48084,7 @@ var contributeCommand = program2.command("contribute <skill>").option("--intents
           "This contribution was combined with newer trunk changes since it was cut."
         );
       }
-      sayLines.push("Awaiting your submit or cancel before this reaches the owner.");
+      sayLines.push("Awaiting your submit or cancel.");
       questions = result.questions;
       const question = result.questions[0];
       if (question) {

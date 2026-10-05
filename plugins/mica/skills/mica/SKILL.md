@@ -141,20 +141,16 @@ snapshots rather than bundling them into one intent.
 
 ## Publish vs contribute
 
-- `publish <path>` is owner-only: it creates a skill's trunk or advances its
-  head directly for everyone who uses it.
-- `contribute` offers selected intent records from your personalization to
-  the skill's owner for review.
+- `publish <path>` creates a new skill and its first revision. Use it only for
+  a skill the server does not know: run `search` first. If `publish` returns
+  `skill_exists`, run `contribute` instead.
+- `contribute` is the only way to change a skill that has a trunk, including
+  one you own. It offers selected intent records from your personalization
+  to the skill's owner for review.
 
-Decide by fact, not by guess. `status` marks every installation the
-user owns with `(owner)`. Owned → `publish`. Not owned → `contribute`.
-
-Do NOT ask the user whether they own the skill, and do NOT infer ownership
-from drift or from "tracked installation": an owner's own copy is also a
-tracked installation, and it drifts whenever the owner edits it. If you did
-not run `status` this session, run it before choosing.
-
-If `publish` returns `not_owner`, run `contribute` instead.
+Decide by fact, not by guess. If `search` finds no skill of that name,
+`publish`. Otherwise `contribute`. Do NOT ask the user whether they own the
+skill.
 
 ## Contributing all or some intents
 
@@ -174,15 +170,25 @@ Choose the flags from what the user asked for:
   edits that have no intent. If the match is unclear, relay the list to
   the user and ask which intents to submit.
 
+If the list says `role: owner`, select every intent unless the user names
+some. The candidate lands on the trunk when you submit.
+
 A successful call returns a confirm question (submit / cancel); relay it as
-usual.
+usual. After `answer <question_id> --choice submit`, read the result line:
+
+- `Revision <n> is live.` — report that revision to the user.
+- `Your copy is behind revision <n>; run update.` — offer to run `update`.
+- `The trunk moved while you confirmed. Run contribute again.` — run
+  `contribute` again with the same intents.
 
 A subset can return one or more blocking `merge_conflict` questions. Each
 question names the intent that the server adds and the file. The options are:
 
-- "Keep the trunk head's version": drops that intent's change in the file.
-- "Use my file for this path": sends your file as is, including other local
-  edits that the question text shows.
+- "Use the trunk head's lines at each conflict; keep other changes": the
+  trunk head wins only on the lines that conflict. Other changes from both
+  sides stay.
+- "Use my lines at each conflict; keep other changes": your lines win only on
+  the lines that conflict. Other changes from both sides stay.
 - "Take suggested": the trunk head plus only that intent. This option is
   present only when the server returns a suggestion.
 
