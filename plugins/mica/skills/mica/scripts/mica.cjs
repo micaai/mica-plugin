@@ -45483,8 +45483,8 @@ function renderHuman(envelope) {
 
 // src/login.ts
 var import_promises3 = require("node:fs/promises");
-var import_node_os2 = require("node:os");
-var import_node_path3 = require("node:path");
+var import_node_os3 = require("node:os");
+var import_node_path4 = require("node:path");
 var import_undici2 = __toESM(require_undici(), 1);
 
 // src/credentials.ts
@@ -45505,20 +45505,20 @@ async function resolveCredentialsPath(options = {}) {
   let dir = cwd;
   for (; ; ) {
     const candidate = (0, import_node_path2.join)(dir, DIR_NAME, FILE_NAME);
-    if (await fileExists(candidate)) return candidate;
+    if (await holdsCredentials(candidate)) return candidate;
     if (dir === home) return void 0;
     const parent = (0, import_node_path2.dirname)(dir);
     if (parent === dir) {
       const homeCandidate = homeCredentialsPath(home);
-      return await fileExists(homeCandidate) ? homeCandidate : void 0;
+      return await holdsCredentials(homeCandidate) ? homeCandidate : void 0;
     }
     dir = parent;
   }
 }
-async function fileExists(path2) {
+async function holdsCredentials(path2) {
   try {
-    await (0, import_promises.readFile)(path2);
-    return true;
+    const parsed = JSON.parse(await (0, import_promises.readFile)(path2, "utf8"));
+    return typeof parsed.refresh_token === "string" && parsed.refresh_token.length > 0;
   } catch {
     return false;
   }
@@ -45541,7 +45541,10 @@ function credentialsPathForScope(options) {
 }
 
 // src/refresh.ts
+var import_node_crypto2 = require("node:crypto");
 var import_promises2 = require("node:fs/promises");
+var import_node_os2 = require("node:os");
+var import_node_path3 = require("node:path");
 var import_undici = __toESM(require_undici(), 1);
 var import_proper_lockfile = __toESM(require_proper_lockfile(), 1);
 var SKEW_SECONDS = 30;
@@ -45570,7 +45573,9 @@ async function getAccessToken(options = {}) {
   const stored = await readCredentialsAt(path2);
   if (!isExpired(stored.access_token)) return stored.access_token;
   const release = await (0, import_proper_lockfile.lock)(path2, {
-    retries: { retries: 20, factor: 1, minTimeout: 25, maxTimeout: 200 }
+    lockfilePath: await lockPathFor(path2),
+    retries: { retries: 20, factor: 1, minTimeout: 25, maxTimeout: 200 },
+    ...options.lockFs && { fs: options.lockFs }
   });
   try {
     const fresh = await readCredentialsAt(path2);
@@ -45607,7 +45612,7 @@ async function renewIdentity(authkitUrl, credentials, path2) {
   const body = await readJson(response);
   if (!response.ok) {
     if (errorCode(body) === "invalid_refresh_token") {
-      await (0, import_promises2.rm)(path2, { force: true });
+      await (0, import_promises2.writeFile)(path2, "{}\n", { mode: 384 });
       throw new LoginRequiredError(`Your session is no longer valid. ${LOGIN_HINT}`);
     }
     throw authkitError(body, "Could not refresh your identity");
@@ -45660,6 +45665,11 @@ function errorCode(body) {
   if (typeof body !== "object" || body === null) return void 0;
   const code = body.code;
   return typeof code === "string" ? code : void 0;
+}
+async function lockPathFor(credentialsPath) {
+  const real = await (0, import_promises2.realpath)(credentialsPath);
+  const key = (0, import_node_crypto2.createHash)("sha256").update(real).digest("hex").slice(0, 16);
+  return (0, import_node_path3.join)((0, import_node_os2.tmpdir)(), `mica-${key}.lock`);
 }
 
 // src/login.ts
@@ -45796,9 +45806,9 @@ async function readJson2(response) {
 }
 function pendingPath(options) {
   const cwd = options.cwd ?? process.cwd();
-  const home = options.home ?? (0, import_node_os2.homedir)();
+  const home = options.home ?? (0, import_node_os3.homedir)();
   const dir = options.scope === "local" ? cwd : home;
-  return (0, import_node_path3.join)(dir, DIR_NAME2, PENDING_FILE_NAME);
+  return (0, import_node_path4.join)(dir, DIR_NAME2, PENDING_FILE_NAME);
 }
 async function readPending(options) {
   try {
@@ -45817,7 +45827,7 @@ async function clearPending(options) {
 }
 async function writePending(pending, options) {
   const path2 = pendingPath(options);
-  await (0, import_promises3.mkdir)((0, import_node_path3.dirname)(path2), { recursive: true });
+  await (0, import_promises3.mkdir)((0, import_node_path4.dirname)(path2), { recursive: true });
   await (0, import_promises3.writeFile)(path2, JSON.stringify(pending, null, 2), { mode: 384 });
 }
 
@@ -45871,11 +45881,11 @@ var import_promises7 = require("node:fs/promises");
 
 // src/files.ts
 var import_promises5 = require("node:fs/promises");
-var import_node_path5 = require("node:path");
+var import_node_path6 = require("node:path");
 
 // ../shared/dist/node/index.js
 var import_promises4 = require("node:fs/promises");
-var import_node_path4 = require("node:path");
+var import_node_path5 = require("node:path");
 async function collectManifest(root) {
   const inputs = [];
   const skippedSymlinks = [];
@@ -45883,8 +45893,8 @@ async function collectManifest(root) {
     for (const entry of await (0, import_promises4.readdir)(dir, { withFileTypes: true })) {
       if (entry.name === "node_modules" || entry.name === ".git")
         continue;
-      const absolute = (0, import_node_path4.join)(dir, entry.name);
-      const path2 = (0, import_node_path4.relative)(root, absolute).split(import_node_path4.sep).join("/");
+      const absolute = (0, import_node_path5.join)(dir, entry.name);
+      const path2 = (0, import_node_path5.relative)(root, absolute).split(import_node_path5.sep).join("/");
       if (entry.isSymbolicLink())
         skippedSymlinks.push(path2);
       else if (entry.isDirectory())
@@ -45934,7 +45944,7 @@ async function writeReturnedFiles(installPath, files, deleted = []) {
   if (!Array.isArray(deleted) || deleted.some((path2) => typeof path2 !== "string")) {
     throw new Error("invalid deleted paths");
   }
-  const root = (0, import_node_path5.resolve)(installPath);
+  const root = (0, import_node_path6.resolve)(installPath);
   const deletedPaths = deleted.map((path2) => validateRelativePath(path2));
   const filePaths = returnedFiles.map((file2) => validateRelativePath(file2.path));
   for (const path2 of [...filePaths, ...deletedPaths]) {
@@ -45952,23 +45962,23 @@ async function writeReturnedFiles(installPath, files, deleted = []) {
   for (const path2 of deletedPaths) {
     const absolute = resolveWithin(root, path2);
     await removePartialTarget(absolute);
-    await removeEmptyAncestors(root, (0, import_node_path5.dirname)(absolute));
+    await removeEmptyAncestors(root, (0, import_node_path6.dirname)(absolute));
   }
 }
 async function applyFiles(installPath, files, expectedManifest) {
   const manifest = parseManifest(expectedManifest);
   const returnedFiles = parseReturnedFiles(files);
   const decodedFiles = validateCompleteResponse(returnedFiles, manifest);
-  const destination = (0, import_node_path5.resolve)(installPath);
-  await assertNoSymlinkComponents(destination, (0, import_node_path5.dirname)(destination));
-  await (0, import_promises5.mkdir)((0, import_node_path5.dirname)(destination), { recursive: true });
-  await assertNoSymlinkComponents(destination, (0, import_node_path5.dirname)(destination));
-  await removeLeftoverSiblings((0, import_node_path5.dirname)(destination));
+  const destination = (0, import_node_path6.resolve)(installPath);
+  await assertNoSymlinkComponents(destination, (0, import_node_path6.dirname)(destination));
+  await (0, import_promises5.mkdir)((0, import_node_path6.dirname)(destination), { recursive: true });
+  await assertNoSymlinkComponents(destination, (0, import_node_path6.dirname)(destination));
+  await removeLeftoverSiblings((0, import_node_path6.dirname)(destination));
   let stagePath;
   let backupPath;
   let movedDestination = false;
   try {
-    stagePath = await (0, import_promises5.mkdtemp)((0, import_node_path5.join)((0, import_node_path5.dirname)(destination), ".mica-stage-"));
+    stagePath = await (0, import_promises5.mkdtemp)((0, import_node_path6.join)((0, import_node_path6.dirname)(destination), ".mica-stage-"));
     await materializeStage(stagePath, decodedFiles);
     await verifyTree(stagePath, manifest);
     const existing = await lstatIfExists(destination);
@@ -45976,7 +45986,7 @@ async function applyFiles(installPath, files, expectedManifest) {
       throw new Error(`refusing to replace symlink installation root: ${destination}`);
     }
     if (existing !== void 0) {
-      backupPath = await createTemporarySibling((0, import_node_path5.dirname)(destination), ".mica-backup-");
+      backupPath = await createTemporarySibling((0, import_node_path6.dirname)(destination), ".mica-backup-");
       await (0, import_promises5.rename)(destination, backupPath);
       movedDestination = true;
     }
@@ -46029,7 +46039,7 @@ function validateCompleteResponse(files, manifest) {
 async function materializeStage(stagePath, files) {
   for (const file2 of files) {
     const absolute = resolveWithin(stagePath, file2.path);
-    await (0, import_promises5.mkdir)((0, import_node_path5.dirname)(absolute), { recursive: true });
+    await (0, import_promises5.mkdir)((0, import_node_path6.dirname)(absolute), { recursive: true });
     await (0, import_promises5.writeFile)(absolute, file2.bytes, { mode: file2.executable ? 493 : 420 });
     await (0, import_promises5.chmod)(absolute, file2.executable ? 493 : 420);
   }
@@ -46053,9 +46063,9 @@ function validateRelativePath(path2) {
   return path2;
 }
 function resolveWithin(root, relativePath) {
-  const absolute = (0, import_node_path5.resolve)(root, ...relativePath.split("/"));
-  const relativeToRoot = (0, import_node_path5.relative)(root, absolute);
-  if (relativeToRoot === ".." || relativeToRoot.startsWith(`..${import_node_path5.sep}`) || relativeToRoot.startsWith(import_node_path5.sep)) {
+  const absolute = (0, import_node_path6.resolve)(root, ...relativePath.split("/"));
+  const relativeToRoot = (0, import_node_path6.relative)(root, absolute);
+  if (relativeToRoot === ".." || relativeToRoot.startsWith(`..${import_node_path6.sep}`) || relativeToRoot.startsWith(import_node_path6.sep)) {
     throw new Error(`path escapes install root: ${relativePath}`);
   }
   return absolute;
@@ -46074,7 +46084,7 @@ async function ensurePartialRoot(root) {
 async function ensureParentDirectory(root, relativePath) {
   let directory = root;
   for (const component of relativePath.split("/").slice(0, -1)) {
-    directory = (0, import_node_path5.join)(directory, component);
+    directory = (0, import_node_path6.join)(directory, component);
     const existing = await lstatIfExists(directory);
     if (existing?.isSymbolicLink()) {
       throw new Error(`refusing to traverse symlink path component: ${directory}`);
@@ -46104,25 +46114,25 @@ async function removePartialTarget(absolute) {
   await (0, import_promises5.rm)(absolute, { recursive: true, force: true });
 }
 async function removeEmptyAncestors(root, start) {
-  const rootPath = (0, import_node_path5.resolve)(root);
-  let directory = (0, import_node_path5.resolve)(start);
+  const rootPath = (0, import_node_path6.resolve)(root);
+  let directory = (0, import_node_path6.resolve)(start);
   while (directory !== rootPath) {
-    const inside = (0, import_node_path5.relative)(rootPath, directory);
-    if (inside === "" || inside === ".." || inside.startsWith(`..${import_node_path5.sep}`)) return;
+    const inside = (0, import_node_path6.relative)(rootPath, directory);
+    if (inside === "" || inside === ".." || inside.startsWith(`..${import_node_path6.sep}`)) return;
     const stats = await lstatIfExists(directory);
     if (stats === void 0 || stats.isSymbolicLink() || !stats.isDirectory()) return;
     if ((await (0, import_promises5.readdir)(directory)).length > 0) return;
     await (0, import_promises5.rm)(directory, { recursive: false, force: true });
-    directory = (0, import_node_path5.dirname)(directory);
+    directory = (0, import_node_path6.dirname)(directory);
   }
 }
 var SymlinkComponentError = class extends Error {
 };
 async function assertNoSymlinkComponents(path2, startPath = path2) {
-  const absolute = (0, import_node_path5.resolve)(path2);
-  const start = (0, import_node_path5.resolve)(startPath);
-  const relativePath = (0, import_node_path5.relative)(start, absolute);
-  if (relativePath === ".." || relativePath.startsWith(`..${import_node_path5.sep}`) || relativePath.startsWith(import_node_path5.sep)) {
+  const absolute = (0, import_node_path6.resolve)(path2);
+  const start = (0, import_node_path6.resolve)(startPath);
+  const relativePath = (0, import_node_path6.relative)(start, absolute);
+  if (relativePath === ".." || relativePath.startsWith(`..${import_node_path6.sep}`) || relativePath.startsWith(import_node_path6.sep)) {
     throw new Error(`path is outside checked root: ${path2}`);
   }
   let current = start;
@@ -46131,9 +46141,9 @@ async function assertNoSymlinkComponents(path2, startPath = path2) {
     throw new SymlinkComponentError(`refusing to traverse symlink path component: ${current}`);
   }
   if (startStats !== void 0 && !startStats.isDirectory() && relativePath !== "") return;
-  const components = relativePath.split(import_node_path5.sep).filter(Boolean);
+  const components = relativePath.split(import_node_path6.sep).filter(Boolean);
   for (const component of components) {
-    current = (0, import_node_path5.join)(current, component);
+    current = (0, import_node_path6.join)(current, component);
     const stats = await lstatIfExists(current);
     if (stats === void 0) return;
     if (stats.isSymbolicLink()) {
@@ -46151,7 +46161,7 @@ async function lstatIfExists(path2) {
   }
 }
 async function createTemporarySibling(parent, prefix) {
-  const path2 = await (0, import_promises5.mkdtemp)((0, import_node_path5.join)(parent, prefix));
+  const path2 = await (0, import_promises5.mkdtemp)((0, import_node_path6.join)(parent, prefix));
   try {
     await (0, import_promises5.rm)(path2, { recursive: true, force: true });
     return path2;
@@ -46165,7 +46175,7 @@ async function removeLeftoverSiblings(parent) {
     const entries = await (0, import_promises5.readdir)(parent);
     for (const name of entries) {
       if (name.startsWith(".mica-stage-") || name.startsWith(".mica-backup-")) {
-        await (0, import_promises5.rm)((0, import_node_path5.join)(parent, name), { recursive: true, force: true }).catch(() => void 0);
+        await (0, import_promises5.rm)((0, import_node_path6.join)(parent, name), { recursive: true, force: true }).catch(() => void 0);
       }
     }
   } catch {
@@ -46205,7 +46215,7 @@ function isRecord(value) {
 }
 
 // src/install-paths.ts
-var import_node_path6 = require("node:path");
+var import_node_path7 = require("node:path");
 var identityScope = {
   connectedFolder: void 0,
   toLocal: (storedPath) => storedPath,
@@ -46216,7 +46226,7 @@ var identityScope = {
 function createInstallPathScope(connectedFolder, mountedRoot = process.cwd()) {
   if (connectedFolder === void 0) return identityScope;
   const persistentRoot = normalizeHostRoot(connectedFolder);
-  const mounted = (0, import_node_path6.resolve)(mountedRoot);
+  const mounted = (0, import_node_path7.resolve)(mountedRoot);
   return {
     connectedFolder: persistentRoot,
     toLocal(storedPath) {
@@ -46226,16 +46236,16 @@ function createInstallPathScope(connectedFolder, mountedRoot = process.cwd()) {
       if (segments.some((segment) => segment === "" || segment === "." || segment === "..")) {
         return void 0;
       }
-      return (0, import_node_path6.join)(mounted, ...segments);
+      return (0, import_node_path7.join)(mounted, ...segments);
     },
     toStored(localPath) {
-      const relativePath = (0, import_node_path6.relative)(mounted, (0, import_node_path6.resolve)(localPath));
-      if (relativePath === "" || (0, import_node_path6.isAbsolute)(relativePath) || relativePath === ".." || relativePath.startsWith(`..${import_node_path6.sep}`)) {
+      const relativePath = (0, import_node_path7.relative)(mounted, (0, import_node_path7.resolve)(localPath));
+      if (relativePath === "" || (0, import_node_path7.isAbsolute)(relativePath) || relativePath === ".." || relativePath.startsWith(`..${import_node_path7.sep}`)) {
         throw new Error(
-          `${(0, import_node_path6.resolve)(localPath)} is outside the connected folder mounted at ${mounted}.`
+          `${(0, import_node_path7.resolve)(localPath)} is outside the connected folder mounted at ${mounted}.`
         );
       }
-      return `${persistentRoot}/${relativePath.split(import_node_path6.sep).join("/")}`;
+      return `${persistentRoot}/${relativePath.split(import_node_path7.sep).join("/")}`;
     },
     assertInsideMount: (localPath) => assertNoSymlinkComponents(localPath, mounted)
   };
@@ -46255,12 +46265,12 @@ function normalizeHostRoot(connectedFolder) {
 
 // src/transfer.ts
 var import_promises6 = require("node:fs/promises");
-var import_node_path7 = require("node:path");
+var import_node_path8 = require("node:path");
 async function collectTransfer(root) {
   const collected = await collectManifest(root);
   const blobs = {};
   for (const entry of collected.manifest) {
-    const bytes = await (0, import_promises6.readFile)((0, import_node_path7.join)(root, entry.path));
+    const bytes = await (0, import_promises6.readFile)((0, import_node_path8.join)(root, entry.path));
     const hash2 = contentHash(bytes);
     if (hash2 !== entry.content_hash) {
       throw new Error(`file changed while scanning: ${root}/${entry.path}`);
@@ -46420,7 +46430,7 @@ function parseInstallation(value) {
 }
 
 // src/status.ts
-var import_node_path8 = require("node:path");
+var import_node_path9 = require("node:path");
 
 // src/contribute.ts
 var contributablesSchema = {
@@ -46823,7 +46833,7 @@ async function runStatus(client, options = {}) {
         state: installation.state,
         owner: installation.owner,
         drifted: null,
-        name_mismatch: (0, import_node_path8.basename)(installation.install_path) !== installation.skill.name
+        name_mismatch: (0, import_node_path9.basename)(installation.install_path) !== installation.skill.name
       };
     } else if (installation.state === "detached") {
       statusInstallation = {
@@ -46833,7 +46843,7 @@ async function runStatus(client, options = {}) {
         state: "detached",
         owner: installation.owner,
         drifted: null,
-        name_mismatch: (0, import_node_path8.basename)(localPath) !== installation.skill.name
+        name_mismatch: (0, import_node_path9.basename)(localPath) !== installation.skill.name
       };
     } else {
       const { manifest } = await collectManifest(localPath);
@@ -46844,7 +46854,7 @@ async function runStatus(client, options = {}) {
         state: "active",
         owner: installation.owner,
         drifted: manifestHash(manifest) !== installation.baseline_manifest_hash,
-        name_mismatch: (0, import_node_path8.basename)(localPath) !== installation.skill.name
+        name_mismatch: (0, import_node_path9.basename)(localPath) !== installation.skill.name
       };
     }
     status.push(
@@ -46966,15 +46976,15 @@ function isRecord5(value) {
 var import_promises8 = require("node:fs/promises");
 
 // src/claude-paths.ts
-var import_node_os3 = require("node:os");
-var import_node_path9 = require("node:path");
+var import_node_os4 = require("node:os");
+var import_node_path10 = require("node:path");
 function resolvePersonalSkillPath(skillName, options = {}) {
   if (skillName.toLowerCase() === "synced") {
     throw new Error("reserved skill name: synced");
   }
   const configuredDir = "configDir" in options ? options.configDir : process.env.CLAUDE_CONFIG_DIR;
-  const configDir = configuredDir || (0, import_node_path9.join)(options.homeDir ?? (0, import_node_os3.homedir)(), ".claude");
-  return (0, import_node_path9.join)(configDir, "skills", skillName);
+  const configDir = configuredDir || (0, import_node_path10.join)(options.homeDir ?? (0, import_node_os4.homedir)(), ".claude");
+  return (0, import_node_path10.join)(configDir, "skills", skillName);
 }
 
 // src/install.ts
@@ -47112,7 +47122,7 @@ function isPassStatus(value) {
 }
 
 // src/publish.ts
-var import_node_path10 = require("node:path");
+var import_node_path11 = require("node:path");
 var import_promises9 = require("node:fs/promises");
 var publishResponseSchema = {
   parse(data) {
@@ -47135,12 +47145,12 @@ var publishResponseSchema = {
 async function runPublish(client, options) {
   const scope = options.scope ?? createInstallPathScope();
   const scan = await runSnapshotScan(client, { scope });
-  const publishPath = (0, import_node_path10.resolve)(options.path);
+  const publishPath = (0, import_node_path11.resolve)(options.path);
   const storedPath = scope.toStored(publishPath);
   await scope.assertInsideMount(publishPath);
   await ensurePublishDirectory(publishPath);
   const transfer = await collectTransfer(publishPath);
-  const directoryName = (0, import_node_path10.basename)(publishPath);
+  const directoryName = (0, import_node_path11.basename)(publishPath);
   let response;
   try {
     response = await client.request("POST", "/v1/skills", publishResponseSchema, {
@@ -47215,7 +47225,7 @@ function isPassStatus2(value) {
 
 // src/detached-exits.ts
 var import_promises10 = require("node:fs/promises");
-var import_node_path11 = require("node:path");
+var import_node_path12 = require("node:path");
 var installationPatchSchema = {
   parse(data) {
     if (!isRecord8(data) || !isRecord8(data.installation)) {
@@ -47239,7 +47249,7 @@ var installationPatchSchema = {
 async function runRelink(client, options) {
   const scope = options.scope ?? createInstallPathScope();
   const { installation, installations } = await findInstallation2(client, options.skill, "relink");
-  const installPath = (0, import_node_path11.resolve)(options.path);
+  const installPath = (0, import_node_path12.resolve)(options.path);
   const storedPath = scope.toStored(installPath);
   const occupant = installations.find(
     (candidate) => candidate.id !== installation.id && candidate.install_path === storedPath
@@ -47263,7 +47273,7 @@ async function runRelink(client, options) {
     installation_id: response.installation.id,
     skill_name: response.installation.skill.name,
     install_path: installPath,
-    name_mismatch: (0, import_node_path11.basename)(installPath) !== response.installation.skill.name
+    name_mismatch: (0, import_node_path12.basename)(installPath) !== response.installation.skill.name
   };
 }
 async function runRestore(client, options) {

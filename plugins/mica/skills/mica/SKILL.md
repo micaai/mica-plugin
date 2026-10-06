@@ -19,6 +19,11 @@ The command examples below are **arguments to the runner**, not commands on
 
 For **each Cowork invocation**:
 
+Give each runner tool call a short, plain description for a non-technical
+user, for example "Check the Mica version", "Copy Mica to your folder (one
+time)", or "Run Mica status". Do not mention hashes, digests, or caches in
+these descriptions.
+
 1. In cloud `Bash`, run `sha256sum` on the rendered absolute cloud source
    `${CLAUDE_SKILL_DIR}/scripts/mica.cjs`. Record its current SHA-256 digest.
    If cloud `Bash` cannot read it, stop; never use an old cached digest.
@@ -34,10 +39,11 @@ For **each Cowork invocation**:
    destination, never as a device CLI path. The delete policy below also
    uses `resolvedPath`. In `device_bash`, run
    `umask 077; mkdir -p -- "$FOLDER/.mica/cli/$SHA"` with `FOLDER` and `SHA`
-   set as in step 5. In cloud `Bash`, run `umask 077`,
-   copy the **file bytes** from the rendered source to
-   `/mnt/user-data/outputs/mica-<current-source-sha256>.cjs`, and check
-   that the staged file's SHA-256 matches the current source digest. Call
+   set as in step 5. In cloud `Bash`, copy the **file bytes** with `cp` from
+   the rendered source to
+   `/mnt/user-data/outputs/mica-<current-source-sha256>.cjs`. If `cp` fails,
+   stop. Do not hash the staged copy: the step 5 guard checks the bytes on
+   the device. Call
    `device_commit_files` with
    `{stagedPath: "/mnt/user-data/outputs/mica-<current-source-sha256>.cjs", devicePath: "<resolvedPath>/.mica/cli/<current-source-sha256>/mica.cjs"}`.
    Confirm the transfer succeeded; do not use a download link or a text
@@ -54,16 +60,14 @@ For **each Cowork invocation**:
    and `CLAUDE_CONFIG_DIR` set to the selected mounted folder:
 
    ```sh
-   FOLDER="$HOME/mnt/<selected-folder-name>"
-   SHA="<current-source-sha256>"
-   CLI="$FOLDER/.mica/cli/$SHA/mica.cjs"
-   ACTUAL=$(sha256sum -- "$CLI" 2>/dev/null) && [ "${ACTUAL%% *}" = "$SHA" ] || {
-     printf '%s\n' 'Mica CLI missing or hash mismatch; do not run.' >&2
-     exit 1
-   }
-   cd "$FOLDER" || exit 1
-   CLAUDE_CONFIG_DIR="$FOLDER" node "$CLI" <args> --connected-folder "<resolvedPath>"
+   FOLDER="$HOME/mnt/<selected-folder-name>"; SHA="<current-source-sha256>"; CLI="$FOLDER/.mica/cli/$SHA/mica.cjs"
+   cd "$FOLDER" && echo "$SHA  $CLI" | sha256sum -c - >/dev/null &&
+     CLAUDE_CONFIG_DIR="$FOLDER" node "$CLI" <args> --connected-folder "<resolvedPath>"
    ```
+
+   Keep the two spaces between `$SHA` and `$CLI`. If the file is missing or
+   its digest does not match, `sha256sum` prints an error, the command exits
+   with a non-zero status, and `node` does not run.
 
    Replace the folder name, 64-character digest, `resolvedPath`, and
    arguments with the values selected **for this invocation**. Always add
@@ -86,8 +90,7 @@ once. Never relink to a directory in another connected folder.
 Run ordinary commands without asking for delete permission, and never ask for
 a grant before a command. In particular, run `status` with a valid access
 token without a permission request. A Mica command that writes or removes
-files can need the grant. A token refresh can too: Mica uses a credential lock
-that it must remove when it finishes.
+files can need the grant.
 
 If a CLI command other than `answer` fails with `EPERM`, the command changed nothing.
 Explain that the grant covers **the entire selected connected folder, including `.mica`,
@@ -95,7 +98,7 @@ for the rest of this session**, not only the path in the error. Ask the user to 
 that scope. On approval, call `device_list_dir` on the **currently selected mounted
 folder**, even on a CLI cache hit, and take its exact host `resolvedPath`. Check that
 it names that folder's root, not its parent, a subfolder, or another connected folder.
-Call `device_request_delete_permission({paths:[resolvedPath],reason:"Allow Mica to remove its credential lock and to replace or remove files during Mica operations; permission covers the entire selected connected folder, including .mica, for the rest of this session."})`.
+Call `device_request_delete_permission({paths:[resolvedPath],reason:"Allow Mica to replace or remove skill files during update and revert; permission covers the entire selected connected folder, including .mica, for the rest of this session."})`.
 Check that the tool response grants deletion for **exactly that root** in this session.
 Then retry the **same complete step 5 command**, including its same-shell hash guard,
 cwd, environment and arguments, **once**. On decline, an unavailable tool, a wider
@@ -106,10 +109,9 @@ remains valid until the session ends.
 If `answer` fails with `EPERM`, do not retry it: the server can have recorded
 the answer while the file on disk was not written. Stop and tell the user.
 
-Never manually delete the credential lock or inspect credentials. During
-permission handling, do not read or print credential file contents, access or
-refresh tokens, assertions, or proxy credentials. Ordinary skill content and
-diffs can be read and shown.
+Never inspect credentials. During permission handling, do not read or print
+credential file contents, access or refresh tokens, assertions, or proxy
+credentials. Ordinary skill content and diffs can be read and shown.
 
 Mica tracks a skill's installation against its trunk on the server. It
 snapshots local edits, merges upstream updates, and offers contributions back
