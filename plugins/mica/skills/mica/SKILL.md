@@ -179,7 +179,7 @@ A successful call returns a confirm question (submit / cancel); relay it as
 usual. After `answer <question_id> --choice submit`, read the result line:
 
 - `Revision <n> is live.` — report that revision to the user.
-- `Your copy is behind revision <n>; run update.` — offer to run `update`.
+- `Your copy is behind revision <n>; run update --all.` — offer to run `update --all`.
 - `The trunk moved while you confirmed. Run contribute again.` — run
   `contribute` again with the same intents.
 
@@ -196,6 +196,33 @@ question names the intent that the server adds and the file. The options are:
 
 Relay the question text, including the suggested merge. Let the user choose.
 Do not answer for the user.
+
+## Updating all or some changes
+
+`update <skill>` with no flags is list mode: it returns the upstream changes
+grouped by revision, each with an `id` (for example `r4.1`) and its text. It
+applies nothing. A residual (`r4.x`) holds the part of a revision that no single
+intent accounts for.
+
+Choose the flags from what the user asked for:
+
+- "Update", "get the latest" → `update <skill> --all` (or `update --all` for
+  every skill). Do not list first.
+- "What's new", "show me first", "update but skip X" → run list mode. Relay the
+  list as **one** `AskUserQuestion` with `multiSelect: true`, every change
+  pre-selected, and the revision summary as the header. A `risky` mark goes in
+  the option description with "security floor will ask again". A `touches yours`
+  mark says "edits lines you personalized". Then run
+  `update <skill> --refuse <unselected ids>` (comma- or space-separated), or
+  `update <skill> --all` when nothing was unselected.
+- Never ask one question per change. Never answer for the user.
+
+If the result says `The trunk moved while you chose. Run update <skill> again.`,
+run list mode again and ask only if the list changed.
+
+A `merge_conflict` question that says `Refusing "..." does not apply cleanly`
+means `keep-mine` refuses every upstream change in that file, not only the one
+the user chose.
 
 ## Connecting to Mica
 
@@ -285,8 +312,9 @@ run `search` with no arguments to list every skill.
 - `search [<words>...] [--owner <name>]` — find a skill's exact name
   by words in its name or description, or by its owner.
 - `install <skill>` — create an installation of a skill from its trunk.
-- `update [<skill>]` — merge the trunk's latest revision into an
-  installation, preserving personalization.
+- `update [<skill>] [--all | --refuse <ids>]` — with no flags, list the
+  upstream changes and apply none; `--all` applies them all, `--refuse <ids>`
+  applies all but the listed changes.
 - `status [--history]` — show tracked skills, drift, and which skills the user owns
   (`(owner)`); `--history` lists snapshot ids, newest first, to pass to `revert --to`.
 - `revert [--to <snapshot>]` — restore an installation to its baseline;

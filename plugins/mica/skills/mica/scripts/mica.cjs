@@ -45847,6 +45847,10 @@ function namedApiErrorMessage(error51) {
   const detail = typeof body?.detail === "string" ? body.detail : void 0;
   return detail !== void 0 ? `${code}: ${detail}` : code;
 }
+function parseIdList(raw) {
+  if (raw === void 0) return [];
+  return raw.split(/[,\s]+/).map((id) => id.trim()).filter((id) => id.length > 0);
+}
 function createApiClient(options = {}) {
   const baseUrl = options.apiBaseUrl ?? process.env.MICA_API_URL ?? "https://app.usemica.com" ?? "http://localhost:3000";
   return {
@@ -46494,7 +46498,7 @@ async function runContribute(client, options) {
     if (error51 instanceof ApiError) throw new Error(contributeErrorMessage(error51));
     throw error51;
   }
-  const requestedIntents = parseIntentIds(options.intents);
+  const requestedIntents = parseIdList(options.intents);
   const requestedUnattributed = options.unattributed === true;
   const requestedAll = options.all === true;
   const isSubmit = requestedAll || requestedUnattributed || requestedIntents.length > 0;
@@ -46592,10 +46596,6 @@ async function findInstallation(client, skill) {
   const installation = installations.find((candidate) => candidate.skill.name === skill);
   if (!installation) throw new Error(`No installation found for skill "${skill}".`);
   return installation;
-}
-function parseIntentIds(raw) {
-  if (raw === void 0) return [];
-  return raw.split(/[,\s]+/).map((id) => id.trim()).filter((id) => id.length > 0);
 }
 function isNothingToContribute(error51) {
   const body = isRecord3(error51.body) ? error51.body : void 0;
@@ -46908,7 +46908,21 @@ var updateResponseSchema = {
     };
   }
 };
+var upstreamSchema = {
+  parse(data) {
+    if (!isRecord5(data) || !Array.isArray(data.revisions)) {
+      throw new Error("invalid upstream response");
+    }
+    return {
+      tracked_revision: parseRevisionRef(data.tracked_revision),
+      head_revision: parseRevisionRef(data.head_revision),
+      revisions: data.revisions.map(parseUpstreamRevision)
+    };
+  }
+};
 async function runUpdate(client, options = {}) {
+  const refuse = refusedIds(options);
+  const isApply = options.all === true || refuse !== void 0;
   const scope = options.scope ?? createInstallPathScope();
   await runSnapshotScan(client, { scope });
   const { installations } = await client.request("GET", "/v1/installations", installationsSchema);
@@ -46925,15 +46939,45 @@ async function runUpdate(client, options = {}) {
       `The recorded path of ${options.skill} is outside the selected connected folder. Relink it to its directory in this folder first.`
     );
   }
+  if (!isApply) {
+    const listed = [];
+    for (const { installation } of resolved) {
+      const upstream = await fetchUpstream(client, installation);
+      listed.push({
+        installation_id: installation.id,
+        skill_name: installation.skill.name,
+        tracked_revision: upstream.tracked_revision,
+        head_revision: upstream.head_revision,
+        revision_count: upstream.revisions.length,
+        change_count: upstream.revisions.reduce(
+          (count, revision) => count + revision.changes.length,
+          0
+        ),
+        revisions: options.skill === void 0 ? [] : upstream.revisions
+      });
+    }
+    return { mode: "list", installations: listed };
+  }
   const results = [];
   for (const { installation, localPath } of resolved) {
     await scope.assertInsideMount(localPath);
-    const response = await client.request(
-      "POST",
-      `/v1/installations/${encodeURIComponent(installation.id)}/updates`,
-      updateResponseSchema,
-      {}
-    );
+    const body = refuse === void 0 ? {} : await refusalBody(client, installation, refuse);
+    let response;
+    try {
+      response = await client.request(
+        "POST",
+        `/v1/installations/${encodeURIComponent(installation.id)}/updates`,
+        updateResponseSchema,
+        body
+      );
+    } catch (error51) {
+      if (error51 instanceof ApiError && isRecord5(error51.body) && error51.body.error === "trunk_moved") {
+        throw new Error(
+          `The trunk moved while you chose. Run update ${installation.skill.name} again.`
+        );
+      }
+      throw error51;
+    }
     if (!response.changed) {
       results.push({
         installation_id: installation.id,
@@ -46950,7 +46994,9 @@ async function runUpdate(client, options = {}) {
       skill_name: installation.skill.name,
       changed: true,
       summary: response.summary,
-      conflict_count: response.conflict_count
+      conflict_count: response.conflict_count,
+      // ponytail: the count is the ids sent; the POST reply has no refused count, upgrade: return refused_change_ids from POST /updates.
+      refused_count: refuse?.length ?? 0
     });
   }
   if (results.some((result) => result.changed)) {
@@ -46958,15 +47004,74 @@ async function runUpdate(client, options = {}) {
   }
   const updated = results.filter((result) => result.changed).length;
   return {
+    mode: "apply",
     updated,
     unchanged: results.length - updated,
     results
   };
 }
+function refusedIds(options) {
+  if (options.refuse === void 0) return void 0;
+  if (options.skill === void 0) {
+    throw new Error("--refuse needs a skill: update <skill> --refuse <ids>.");
+  }
+  if (options.all === true) throw new Error("--all and --refuse cannot be combined.");
+  const ids = [...new Set(parseIdList(options.refuse))];
+  if (ids.length === 0) throw new Error("--refuse needs at least one upstream change id.");
+  return ids;
+}
+async function refusalBody(client, installation, refuse) {
+  const upstream = await fetchUpstream(client, installation);
+  const listed = new Set(
+    upstream.revisions.flatMap((revision) => revision.changes.map((change) => change.id))
+  );
+  for (const id of refuse) {
+    if (!listed.has(id)) {
+      throw new Error(
+        `"${id}" is not an upstream change for ${installation.skill.name}. Run "update ${installation.skill.name}" to see the current list.`
+      );
+    }
+  }
+  return { head_revision_id: upstream.head_revision.id, refuse };
+}
+function fetchUpstream(client, installation) {
+  return client.request(
+    "GET",
+    `/v1/installations/${encodeURIComponent(installation.id)}/upstream`,
+    upstreamSchema
+  );
+}
 function selectInstallations(installations, skill) {
   const active = installations.filter((installation) => installation.state === "active");
   if (skill === void 0) return active;
   return active.filter((installation) => installation.skill.name === skill);
+}
+function parseUpstreamRevision(value) {
+  if (!isRecord5(value) || typeof value.number !== "number" || typeof value.id !== "string" || typeof value.summary !== "string" || !Array.isArray(value.changes) || !(value.contributor === null || isRecord5(value.contributor) && typeof value.contributor.email === "string")) {
+    throw new Error("invalid upstream revision");
+  }
+  return {
+    number: value.number,
+    id: value.id,
+    contributor: value.contributor === null ? null : { email: value.contributor.email },
+    summary: value.summary,
+    changes: value.changes.map(parseUpstreamChange)
+  };
+}
+function parseUpstreamChange(value) {
+  if (!isRecord5(value) || typeof value.id !== "string" || typeof value.revision_number !== "number" || value.kind !== "intent" && value.kind !== "residual" || typeof value.text !== "string" || !Array.isArray(value.paths) || !value.paths.every((path2) => typeof path2 === "string") || typeof value.hunk_count !== "number" || typeof value.risky !== "boolean" || typeof value.touches_yours !== "boolean") {
+    throw new Error("invalid upstream change");
+  }
+  return {
+    id: value.id,
+    revision_number: value.revision_number,
+    kind: value.kind,
+    text: value.text,
+    paths: value.paths,
+    hunk_count: value.hunk_count,
+    risky: value.risky,
+    touches_yours: value.touches_yours
+  };
 }
 function isRecord5(value) {
   return value !== null && typeof value === "object" && !Array.isArray(value);
@@ -47614,7 +47719,7 @@ var answerCommand = program2.command("answer <question_id>").requiredOption("--c
       sayLines.push(`Revision ${result.result.revision_number} is live.`);
       if (!result.result.installation_advanced) {
         sayLines.push(
-          `Your copy is behind revision ${result.result.revision_number}; run update.`
+          `Your copy is behind revision ${result.result.revision_number}; run update --all.`
         );
       }
     } else if (result.result?.state === "pending") {
@@ -48009,24 +48114,79 @@ program2.command("uninstall <skill>").action(async (skill) => {
   }
   process.exitCode = emit(envelope, { json: program2.opts().json });
 });
-program2.command("update [skill]").action(async (skill) => {
+var updateCommand = program2.command("update [skill]").option("--all", "apply every upstream change, for one skill or every installation").option(
+  "--refuse <ids>",
+  "apply everything except these upstream change ids, comma- or space-separated"
+).action(async (skill) => {
   let envelope;
   const client = createApiClient();
   try {
+    const opts = updateCommand.opts();
     const run = await runUpdate(client, {
       scope: installPathScope(),
-      ...skill !== void 0 && { skill }
+      ...skill !== void 0 && { skill },
+      ...opts.all !== void 0 && { all: opts.all },
+      ...opts.refuse !== void 0 && { refuse: opts.refuse }
     });
-    const lines = run.results.map(
-      (installationResult) => installationResult.changed ? `Updated ${installationResult.skill_name}${installationResult.conflict_count > 0 ? ` (${installationResult.conflict_count} conflict${installationResult.conflict_count === 1 ? "" : "s"})` : ""}: ${installationResult.summary}` : `${installationResult.skill_name} is already at revision ${installationResult.revision_number}.`
-    );
+    const sayLines = [];
+    const nextActions = [];
+    let result;
+    if (run.mode === "list") {
+      result = run;
+      if (skill === void 0) {
+        const behind = run.installations.filter(
+          (installation) => installation.revision_count > 0
+        );
+        for (const installation of behind) {
+          sayLines.push(
+            `${installation.skill_name}: ${installation.revision_count} revision(s) behind (r${installation.tracked_revision.number + 1}\u2013r${installation.head_revision.number}), ${installation.change_count} upstream change(s).`
+          );
+        }
+        if (behind.length > 0) {
+          nextActions.push("update --all");
+          for (const installation of behind) {
+            nextActions.push(`update ${installation.skill_name}`);
+          }
+        } else if (run.installations.length > 0) {
+          sayLines.push("Every installation is at its trunk head.");
+        }
+      } else {
+        for (const installation of run.installations) {
+          for (const revision of installation.revisions) {
+            const by = revision.contributor ? ` by ${revision.contributor.email}` : "";
+            const summary = revision.summary ? `: ${revision.summary}` : "";
+            sayLines.push(`r${revision.number}${by}${summary}`);
+            for (const change of revision.changes) {
+              const marks = `${change.risky ? " [risky]" : ""}${change.touches_yours ? " [touches yours]" : ""}`;
+              sayLines.push(
+                change.kind === "residual" ? `[${change.id}] ${change.text}${marks}` : `[${change.id}] "${change.text}" \u2014 ${change.hunk_count} hunk(s) in ${change.paths.join(", ")}${marks}`
+              );
+            }
+          }
+        }
+        const firstChange = run.installations[0]?.revisions[0]?.changes[0];
+        if (firstChange !== void 0) {
+          nextActions.push(`update ${skill} --all`);
+          nextActions.push(`update ${skill} --refuse ${firstChange.id}`);
+        } else {
+          sayLines.push(`No upstream changes for ${skill}.`);
+        }
+      }
+    } else {
+      result = { mode: "apply", updated: run.updated, unchanged: run.unchanged };
+      for (const installationResult of run.results) {
+        sayLines.push(
+          installationResult.changed ? `Updated ${installationResult.skill_name}${installationResult.conflict_count > 0 ? ` (${installationResult.conflict_count} conflict${installationResult.conflict_count === 1 ? "" : "s"})` : ""}${(installationResult.refused_count ?? 0) > 0 ? `, refused ${installationResult.refused_count} change(s)` : ""}: ${installationResult.summary}` : `${installationResult.skill_name} is already at revision ${installationResult.revision_number}.`
+        );
+      }
+    }
     envelope = {
       ok: true,
       command: "update",
-      result: { updated: run.updated, unchanged: run.unchanged },
-      say_to_user: lines.length > 0 ? lines.join("\n") : "No installations to update.",
+      result,
+      say_to_user: sayLines.length > 0 ? sayLines.join("\n") : "No installations to update.",
       questions: [],
-      next_actions: []
+      next_actions: nextActions
     };
     await mergePostCommandNotices2(envelope, client);
   } catch (error51) {

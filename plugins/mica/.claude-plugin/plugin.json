@@ -1,7 +1,6 @@
 {
-  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
   "name": "mica",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "description": "Personalization layer for shared agent skills: snapshot local edits, update from the trunk, and contribute changes back to the owner.",
   "author": {
     "name": "Mica"
