@@ -1,0 +1,1 @@
+{ "mcpServers": { "mica": { "type": "http", "url": "https://app.usemica.com/mcp" } } }
