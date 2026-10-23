@@ -90,7 +90,7 @@ snapshots rather than bundling them into one intent.
 
 ## Publish vs contribute
 
-- `publish <path>` creates a new skill and its first revision. Use it only for
+- `publish <path>` creates a new skill and its first version. Use it only for
   a skill the server does not know: run `search` first. If `publish` returns
   `skill_exists`, run `contribute` instead.
 - `contribute` is the only way to change a skill that has a trunk, including
@@ -125,8 +125,8 @@ some. The candidate lands on the trunk when you submit.
 A successful call returns a confirm question (submit / cancel); relay it as
 usual. After `answer <question_id> --choice submit`, read the result line:
 
-- `Revision <n> is live.` — report that revision to the user.
-- `Your copy is behind revision <n>; run update --all.` — offer to run `update --all`.
+- `Version <n> is live.` — report that version to the user.
+- `Your copy is behind version <n>; run update --all.` — offer to run `update --all`.
 - `The trunk moved while you confirmed. Run contribute again.` — run
   `contribute` again with the same intents.
 
@@ -147,8 +147,8 @@ Do not answer for the user.
 ## Updating all or some changes
 
 `update <skill>` with no flags is list mode: it returns the upstream changes
-grouped by revision, each with an `id` (for example `r4.1`) and its text. It
-changes nothing. A residual (`r4.x`) holds the part of a revision that no single
+grouped by version, each with an `id` (for example `v4.1`) and its text. It
+changes nothing. A residual (`v4.x`) holds the part of a version that no single
 intent accounts for.
 
 Choose the flags from what the user asked for:
@@ -157,7 +157,7 @@ Choose the flags from what the user asked for:
   every skill). Do not list first.
 - "What's new", "show me first", "update but skip X" → run list mode. Relay the
   list as **one** `AskUserQuestion` with `multiSelect: true`, every change
-  pre-selected, and the revision summary as the header. A `risky` mark goes in
+  pre-selected, and the version summary as the header. A `risky` mark goes in
   the option description with "security floor will ask again". A `touches yours`
   mark says "edits lines you personalized". Then run
   `update <skill> --refuse <unselected ids>` (comma- or space-separated), or
@@ -179,9 +179,9 @@ Commands may return `questions` — server-held pending questions, each with a
 1. Relay the question and its options to the user (maps 1:1 onto
    AskUserQuestion). If the question text is long — a diff or a
    suggested merge — print it in full in the chat first, then ask with
-   only the question line and the options. In an adoption diff, `+`
+   only the question line and the options. In a keep-or-replace diff, `+`
    lines are the user's local copy and `-` lines are the tracked
-   revision.
+   version.
 2. Run `answer <question_id> --choice <option_id>` with the user's choice.
 
 Pending questions survive interruption: an unanswered question reappears on

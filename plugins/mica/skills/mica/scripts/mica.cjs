@@ -45409,7 +45409,7 @@ var QUESTION_KINDS = [
   "merge_conflict",
   "semantic_flag",
   "inferred_intent",
-  "adoption",
+  "keep_or_replace",
   "detached",
   "publish_flags",
   "contribute_confirm"
@@ -45422,7 +45422,7 @@ var CONFLICT_CHOICE_IDS = [
 ];
 var SEMANTIC_FLAG_CHOICE_IDS = ["dismiss", "edited"];
 var INTENT_CHOICE_IDS = ["confirmed", "denied", "skipped"];
-var ADOPTION_CHOICE_IDS = ["adopt", "overwrite"];
+var KEEP_OR_REPLACE_CHOICE_IDS = ["keep", "replace"];
 var DETACHED_CHOICE_IDS = ["relink", "restore", "uninstall"];
 var PUBLISH_FLAG_CHOICE_IDS = ["proceed", "revise"];
 var CONTRIBUTE_CONFIRM_CHOICE_IDS = ["submit", "cancel"];
@@ -45430,7 +45430,7 @@ var KIND_CHOICES = {
   merge_conflict: CONFLICT_CHOICE_IDS,
   semantic_flag: SEMANTIC_FLAG_CHOICE_IDS,
   inferred_intent: INTENT_CHOICE_IDS,
-  adoption: ADOPTION_CHOICE_IDS,
+  keep_or_replace: KEEP_OR_REPLACE_CHOICE_IDS,
   detached: DETACHED_CHOICE_IDS,
   publish_flags: PUBLISH_FLAG_CHOICE_IDS,
   contribute_confirm: CONTRIBUTE_CONFIRM_CHOICE_IDS
@@ -46264,14 +46264,14 @@ function normalizeHostRoot(connectedFolder2) {
 // src/contribute.ts
 var contributablesSchema = {
   parse(data) {
-    if (!isRecord2(data) || data.role !== "owner" && data.role !== "member" || !Array.isArray(data.intents) || !isRecord2(data.cut_against_revision)) {
+    if (!isRecord2(data) || data.role !== "owner" && data.role !== "member" || !Array.isArray(data.intents) || !isRecord2(data.cut_against_version)) {
       throw new Error("invalid contributables response");
     }
     return {
       role: data.role,
       intents: data.intents.map(parseContributeIntent),
       unattributed: data.unattributed === null ? null : parseUnattributed(data.unattributed),
-      cut_against_revision: parseRevisionRef(data.cut_against_revision)
+      cut_against_version: parseSkillVersionRef(data.cut_against_version)
     };
   }
 };
@@ -46281,17 +46281,17 @@ var createContributionSchema = {
       throw new Error("invalid contribution response");
     }
     const candidate = data.contribution_candidate;
-    if (!isRecord2(candidate.rebased_onto_revision)) {
+    if (!isRecord2(candidate.rebased_onto_version)) {
       throw new Error("invalid contribution response");
     }
-    const rebasedOntoRevision = parseRevisionRef(candidate.rebased_onto_revision);
+    const rebasedOntoVersion = parseSkillVersionRef(candidate.rebased_onto_version);
     if (Array.isArray(candidate.questions)) {
       if (!Array.isArray(candidate.conflicts)) throw new Error("invalid contribution response");
       return {
         outcome: "conflicts",
         summary: "",
         security_flags: [],
-        rebased_onto_revision: rebasedOntoRevision,
+        rebased_onto_version: rebasedOntoVersion,
         conflicts: candidate.conflicts.map(requireString),
         questions: candidate.questions.map((question) => questionSchema.parse(question))
       };
@@ -46301,7 +46301,7 @@ var createContributionSchema = {
         outcome: "clean",
         summary: candidate.summary,
         security_flags: candidate.security_flags.map(parseContributeSecurityFlag),
-        rebased_onto_revision: rebasedOntoRevision,
+        rebased_onto_version: rebasedOntoVersion,
         conflicts: candidate.conflicts.map(requireString),
         questions: [questionSchema.parse(candidate.question)]
       };
@@ -46335,7 +46335,7 @@ async function runContribute(client, options) {
       role: contributables.role,
       intents: contributables.intents,
       unattributed: contributables.unattributed,
-      cut_against_revision: contributables.cut_against_revision
+      cut_against_version: contributables.cut_against_version
     };
   }
   let intentRecordIds;
@@ -46383,8 +46383,8 @@ async function runContribute(client, options) {
       installation_id: installation.id,
       skill_name: installation.skill.name,
       conflicts: response.conflicts,
-      rebased_onto_revision: response.rebased_onto_revision,
-      cut_against_revision_number: contributables.cut_against_revision.number,
+      rebased_onto_version: response.rebased_onto_version,
+      cut_against_version_number: contributables.cut_against_version.number,
       questions: response.questions
     };
   }
@@ -46395,8 +46395,8 @@ async function runContribute(client, options) {
     skill_name: installation.skill.name,
     summary: response.summary,
     security_flags: response.security_flags,
-    rebased_onto_revision: response.rebased_onto_revision,
-    cut_against_revision_number: contributables.cut_against_revision.number,
+    rebased_onto_version: response.rebased_onto_version,
+    cut_against_version_number: contributables.cut_against_version.number,
     questions: response.questions
   };
 }
@@ -46462,9 +46462,9 @@ function parseUnattributed(value) {
   }
   return { hunk_count: value.hunk_count, paths: value.paths.map(requireString) };
 }
-function parseRevisionRef(value) {
+function parseSkillVersionRef(value) {
   if (!isRecord2(value) || typeof value.id !== "string" || typeof value.number !== "number") {
-    throw new Error("invalid revision reference");
+    throw new Error("invalid version reference");
   }
   return { id: value.id, number: value.number };
 }
@@ -46537,11 +46537,10 @@ async function contributeEnvelope(client, options) {
     } else if (result.outcome === "clean") {
       sayLines.push(`Contribution candidate for ${result.skill_name} ready: ${result.summary}`);
       for (const flag of result.security_flags) {
-        sayLines.push(
-          `Security ${flag.severity}: ${flag.kind} in ${flag.path} \u2014 ${flag.explanation}`
-        );
+        const subject = flag.kind === "deterministic" ? flag.path : `${flag.kind} in ${flag.path}`;
+        sayLines.push(`Security ${flag.severity}: ${subject} \u2014 ${flag.explanation}`);
       }
-      if (result.rebased_onto_revision.number > result.cut_against_revision_number) {
+      if (result.rebased_onto_version.number > result.cut_against_version_number) {
         sayLines.push("This contribution was combined with newer trunk changes since it was cut.");
       }
       sayLines.push("Awaiting your submit or cancel.");
@@ -46553,7 +46552,7 @@ async function contributeEnvelope(client, options) {
       }
     } else {
       sayLines.push(
-        `${result.conflicts.length} conflict${result.conflicts.length === 1 ? "" : "s"} in ${result.skill_name} against trunk revision ${result.rebased_onto_revision.number}: ${result.conflicts.join(", ")}.`
+        `${result.conflicts.length} conflict${result.conflicts.length === 1 ? "" : "s"} in ${result.skill_name} against trunk version ${result.rebased_onto_version.number}: ${result.conflicts.join(", ")}.`
       );
       sayLines.push(
         "Resolve each conflict; the candidate then moves to your submit/cancel confirmation."
@@ -46814,8 +46813,8 @@ function isRecord4(value) {
 function parseInstallation(value) {
   if (!isRecord4(value)) throw new Error("invalid installation response");
   const skill = value.skill;
-  const trackedRevision = value.tracked_revision;
-  if (typeof value.id !== "string" || typeof value.install_path !== "string" || value.state !== "active" && value.state !== "detached" || typeof value.owner !== "boolean" || typeof value.baseline_manifest_hash !== "string" || !isRecord4(skill) || typeof skill.id !== "string" || typeof skill.name !== "string" || !isRecord4(trackedRevision) || typeof trackedRevision.id !== "string" || typeof trackedRevision.number !== "number") {
+  const trackedVersion = value.tracked_version;
+  if (typeof value.id !== "string" || typeof value.install_path !== "string" || value.state !== "active" && value.state !== "detached" || typeof value.owner !== "boolean" || typeof value.baseline_manifest_hash !== "string" || !isRecord4(skill) || typeof skill.id !== "string" || typeof skill.name !== "string" || !isRecord4(trackedVersion) || typeof trackedVersion.id !== "string" || typeof trackedVersion.number !== "number") {
     throw new Error("invalid installation response");
   }
   return {
@@ -46825,7 +46824,7 @@ function parseInstallation(value) {
     owner: value.owner,
     baseline_manifest_hash: value.baseline_manifest_hash,
     skill: { id: skill.id, name: skill.name },
-    tracked_revision: { id: trackedRevision.id, number: trackedRevision.number }
+    tracked_version: { id: trackedVersion.id, number: trackedVersion.number }
   };
 }
 async function snapshotEnvelope(client, options) {
@@ -47211,13 +47210,13 @@ var updateResponseSchema = {
 };
 var upstreamSchema = {
   parse(data) {
-    if (!isRecord6(data) || !Array.isArray(data.revisions)) {
+    if (!isRecord6(data) || !Array.isArray(data.versions)) {
       throw new Error("invalid upstream response");
     }
     return {
-      tracked_revision: parseRevisionRef(data.tracked_revision),
-      head_revision: parseRevisionRef(data.head_revision),
-      revisions: data.revisions.map(parseUpstreamRevision)
+      tracked_version: parseSkillVersionRef(data.tracked_version),
+      head_version: parseSkillVersionRef(data.head_version),
+      versions: data.versions.map(parseUpstreamVersion)
     };
   }
 };
@@ -47247,14 +47246,14 @@ async function runUpdate(client, options = {}) {
       listed.push({
         installation_id: installation.id,
         skill_name: installation.skill.name,
-        tracked_revision: upstream.tracked_revision,
-        head_revision: upstream.head_revision,
-        revision_count: upstream.revisions.length,
-        change_count: upstream.revisions.reduce(
-          (count, revision) => count + revision.changes.length,
+        tracked_version: upstream.tracked_version,
+        head_version: upstream.head_version,
+        version_count: upstream.versions.length,
+        change_count: upstream.versions.reduce(
+          (count, version2) => count + version2.changes.length,
           0
         ),
-        revisions: options.skill === void 0 ? [] : upstream.revisions
+        versions: options.skill === void 0 ? [] : upstream.versions
       });
     }
     return { mode: "list", installations: listed };
@@ -47285,7 +47284,7 @@ async function runUpdate(client, options = {}) {
         skill_name: installation.skill.name,
         changed: false,
         conflict_count: 0,
-        revision_number: installation.tracked_revision.number
+        version_number: installation.tracked_version.number
       });
       continue;
     }
@@ -47324,7 +47323,7 @@ function refusedIds(options) {
 async function refusalBody(client, installation, refuse) {
   const upstream = await fetchUpstream(client, installation);
   const listed = new Set(
-    upstream.revisions.flatMap((revision) => revision.changes.map((change) => change.id))
+    upstream.versions.flatMap((version2) => version2.changes.map((change) => change.id))
   );
   for (const id of refuse) {
     if (!listed.has(id)) {
@@ -47333,7 +47332,7 @@ async function refusalBody(client, installation, refuse) {
       );
     }
   }
-  return { head_revision_id: upstream.head_revision.id, refuse };
+  return { head_version_id: upstream.head_version.id, refuse };
 }
 function fetchUpstream(client, installation) {
   return client.request(
@@ -47347,9 +47346,9 @@ function selectInstallations(installations, skill) {
   if (skill === void 0) return active;
   return active.filter((installation) => installation.skill.name === skill);
 }
-function parseUpstreamRevision(value) {
+function parseUpstreamVersion(value) {
   if (!isRecord6(value) || typeof value.number !== "number" || typeof value.id !== "string" || typeof value.summary !== "string" || !Array.isArray(value.changes) || !(value.contributor === null || isRecord6(value.contributor) && typeof value.contributor.email === "string")) {
-    throw new Error("invalid upstream revision");
+    throw new Error("invalid upstream version");
   }
   return {
     number: value.number,
@@ -47360,12 +47359,12 @@ function parseUpstreamRevision(value) {
   };
 }
 function parseUpstreamChange(value) {
-  if (!isRecord6(value) || typeof value.id !== "string" || typeof value.revision_number !== "number" || value.kind !== "intent" && value.kind !== "residual" || typeof value.text !== "string" || !Array.isArray(value.paths) || !value.paths.every((path2) => typeof path2 === "string") || typeof value.hunk_count !== "number" || typeof value.risky !== "boolean" || typeof value.touches_yours !== "boolean") {
+  if (!isRecord6(value) || typeof value.id !== "string" || typeof value.version_number !== "number" || value.kind !== "intent" && value.kind !== "residual" || typeof value.text !== "string" || !Array.isArray(value.paths) || !value.paths.every((path2) => typeof path2 === "string") || typeof value.hunk_count !== "number" || typeof value.risky !== "boolean" || typeof value.touches_yours !== "boolean") {
     throw new Error("invalid upstream change");
   }
   return {
     id: value.id,
-    revision_number: value.revision_number,
+    version_number: value.version_number,
     kind: value.kind,
     text: value.text,
     paths: value.paths,
@@ -47394,10 +47393,10 @@ async function updateEnvelope(client, options) {
     if (run.mode === "list") {
       result = run;
       if (skill === void 0) {
-        const behind = run.installations.filter((installation) => installation.revision_count > 0);
+        const behind = run.installations.filter((installation) => installation.version_count > 0);
         for (const installation of behind) {
           sayLines.push(
-            `${installation.skill_name}: ${installation.revision_count} revision(s) behind (r${installation.tracked_revision.number + 1}\u2013r${installation.head_revision.number}), ${installation.change_count} upstream change(s).`
+            `${installation.skill_name}: ${installation.version_count} version(s) behind (v${installation.tracked_version.number + 1}\u2013v${installation.head_version.number}), ${installation.change_count} upstream change(s).`
           );
         }
         if (behind.length > 0) {
@@ -47410,11 +47409,11 @@ async function updateEnvelope(client, options) {
         }
       } else {
         for (const installation of run.installations) {
-          for (const revision of installation.revisions) {
-            const by = revision.contributor ? ` by ${revision.contributor.email}` : "";
-            const summary = revision.summary ? `: ${revision.summary}` : "";
-            sayLines.push(`r${revision.number}${by}${summary}`);
-            for (const change of revision.changes) {
+          for (const version2 of installation.versions) {
+            const by = version2.contributor ? ` by ${version2.contributor.email}` : "";
+            const summary = version2.summary ? `: ${version2.summary}` : "";
+            sayLines.push(`v${version2.number}${by}${summary}`);
+            for (const change of version2.changes) {
               const marks = `${change.risky ? " [risky]" : ""}${change.touches_yours ? " [touches yours]" : ""}`;
               sayLines.push(
                 change.kind === "residual" ? `[${change.id}] ${change.text}${marks}` : `[${change.id}] "${change.text}" \u2014 ${change.hunk_count} hunk(s) in ${change.paths.join(", ")}${marks}`
@@ -47422,7 +47421,7 @@ async function updateEnvelope(client, options) {
             }
           }
         }
-        const firstChange = run.installations[0]?.revisions[0]?.changes[0];
+        const firstChange = run.installations[0]?.versions[0]?.changes[0];
         if (firstChange !== void 0) {
           nextActions.push(`update ${skill} --all`);
           nextActions.push(`update ${skill} --refuse ${firstChange.id}`);
@@ -47434,7 +47433,7 @@ async function updateEnvelope(client, options) {
       result = { mode: "apply", updated: run.updated, unchanged: run.unchanged };
       for (const installationResult of run.results) {
         sayLines.push(
-          installationResult.changed ? `Updated ${installationResult.skill_name}${installationResult.conflict_count > 0 ? ` (${installationResult.conflict_count} conflict${installationResult.conflict_count === 1 ? "" : "s"})` : ""}${(installationResult.refused_count ?? 0) > 0 ? `, refused ${installationResult.refused_count} change(s)` : ""}: ${installationResult.summary}` : `${installationResult.skill_name} is already at revision ${installationResult.revision_number}.`
+          installationResult.changed ? `Updated ${installationResult.skill_name}${installationResult.conflict_count > 0 ? ` (${installationResult.conflict_count} conflict${installationResult.conflict_count === 1 ? "" : "s"})` : ""}${(installationResult.refused_count ?? 0) > 0 ? `, refused ${installationResult.refused_count} change(s)` : ""}: ${installationResult.summary}` : `${installationResult.skill_name} is already at version ${installationResult.version_number}.`
         );
       }
     }
@@ -47533,8 +47532,8 @@ async function runInstall(client, options) {
   }
   let outcome;
   if (!existing) outcome = "installed";
-  else if (response.questions.length > 0) outcome = "adoption_required";
-  else outcome = "adopted";
+  else if (response.questions.length > 0) outcome = "keep_or_replace_required";
+  else outcome = "kept";
   return {
     installation_id: response.installation.id,
     skill_name: response.installation.skill.name,
@@ -47601,7 +47600,7 @@ function parseSecurityFlag(value) {
   };
 }
 function isFlagSource(value) {
-  return value === "rule11" || value === "llm";
+  return value === "deterministic" || value === "llm";
 }
 function isFlagSeverity(value) {
   return value === "info" || value === "warning";
@@ -47618,7 +47617,7 @@ async function installEnvelope(client, options) {
       scope: createInstallPathScope(options.connectedFolder)
     });
     const securityLines = result.security_flags.map(
-      (flag) => `Security ${flag.severity} (${flag.source}): ${flag.explanation}${flag.pass_status === "failed" ? " (security pass failed)" : ""}`
+      (flag) => `Security ${flag.severity}: ${flag.explanation}${flag.pass_status === "failed" ? " (security pass failed)" : ""}`
     );
     const symlinkLines = result.skippedSymlinks.map(
       (path2) => `Warning: skipped symlink ${path2} in ${result.install_path}.`
@@ -47628,10 +47627,10 @@ async function installEnvelope(client, options) {
       case "installed":
         installLine = `Installed ${result.skill_name} at ${result.install_path}.`;
         break;
-      case "adopted":
-        installLine = `Adopted the existing ${result.skill_name} files at ${result.install_path}.`;
+      case "kept":
+        installLine = `Kept the existing files at ${result.install_path}. Now tracking ${result.skill_name}.`;
         break;
-      case "adoption_required":
+      case "keep_or_replace_required":
         installLine = `Stored the existing ${result.skill_name} files at ${result.install_path}; a choice is required.`;
         break;
     }
@@ -47670,16 +47669,16 @@ var import_node_path10 = require("node:path");
 var import_promises9 = require("node:fs/promises");
 var publishResponseSchema = {
   parse(data) {
-    if (!isRecord8(data) || !isRecord8(data.skill) || !isRecord8(data.revision) || !isRecord8(data.installation) || !Array.isArray(data.warnings) || !Array.isArray(data.security_flags)) {
+    if (!isRecord8(data) || !isRecord8(data.skill) || !isRecord8(data.version) || !isRecord8(data.installation) || !Array.isArray(data.warnings) || !Array.isArray(data.security_flags)) {
       throw new Error("invalid publish response");
     }
-    const { skill, revision, installation } = data;
-    if (typeof skill.id !== "string" || typeof skill.name !== "string" || typeof revision.id !== "string" || typeof revision.number !== "number" || typeof installation.id !== "string" || typeof installation.install_path !== "string" || data.warnings.some((warning) => typeof warning !== "string")) {
+    const { skill, version: version2, installation } = data;
+    if (typeof skill.id !== "string" || typeof skill.name !== "string" || typeof version2.id !== "string" || typeof version2.number !== "number" || typeof installation.id !== "string" || typeof installation.install_path !== "string" || data.warnings.some((warning) => typeof warning !== "string")) {
       throw new Error("invalid publish response");
     }
     return {
       skill: { id: skill.id, name: skill.name },
-      revision: { id: revision.id, number: revision.number },
+      version: { id: version2.id, number: version2.number },
       installation: { id: installation.id, install_path: installation.install_path },
       warnings: data.warnings,
       security_flags: data.security_flags.map(parseSecurityFlag2)
@@ -47708,7 +47707,7 @@ async function runPublish(client, options) {
     if (error51 instanceof ApiError) {
       if (isRecord8(error51.body) && error51.body.error === "skill_exists") {
         throw new Error(
-          `${String(error51.body.skill)} already exists on the trunk. Use contribute to add a revision.`
+          `${String(error51.body.skill)} already exists on the trunk. Use contribute to add a version.`
         );
       }
       throw new Error(namedApiErrorMessage(error51));
@@ -47720,7 +47719,7 @@ async function runPublish(client, options) {
   }
   return {
     skill_name: response.skill.name,
-    revision_number: response.revision.number,
+    version_number: response.version.number,
     install_path: publishPath,
     warnings: response.warnings,
     security_flags: response.security_flags,
@@ -47758,7 +47757,7 @@ function parseSecurityFlag2(value) {
   };
 }
 function isFlagSource2(value) {
-  return value === "rule11" || value === "llm";
+  return value === "deterministic" || value === "llm";
 }
 function isFlagSeverity2(value) {
   return value === "info" || value === "warning";
@@ -47774,11 +47773,11 @@ async function publishEnvelope(client, options) {
       path: path2,
       scope: createInstallPathScope(options.connectedFolder)
     });
-    const publishLine = `Published ${result.skill_name} revision 1 (new skill).`;
+    const publishLine = `Published ${result.skill_name} version 1 (new skill).`;
     const trackingLine = `Now tracking ${result.install_path}.`;
     const warningLines = result.warnings.map((warning) => `Warning: ${warning}`);
     const securityLines = result.security_flags.map(
-      (flag) => `Security ${flag.severity} (${flag.source}): ${flag.explanation}${flag.pass_status === "failed" ? " (security pass failed)" : ""}`
+      (flag) => `Security ${flag.severity}: ${flag.explanation}${flag.pass_status === "failed" ? " (security pass failed)" : ""}`
     );
     const symlinkLines = result.skippedSymlinks.map(
       (path3) => `Warning: skipped symlink ${path3} in ${result.install_path}.`
@@ -47791,7 +47790,7 @@ async function publishEnvelope(client, options) {
       command: "publish",
       result: {
         skill_name: result.skill_name,
-        revision_number: result.revision_number,
+        version_number: result.version_number,
         install_path: result.install_path,
         warnings: result.warnings,
         security_flags: result.security_flags,
@@ -48102,10 +48101,10 @@ var answerSchema = {
 };
 function parseResult(value) {
   if (isRecord10(value) && value.state === "pending") return { state: "pending" };
-  if (isRecord10(value) && value.state === "accepted" && typeof value.revision_number === "number" && typeof value.installation_advanced === "boolean") {
+  if (isRecord10(value) && value.state === "accepted" && typeof value.version_number === "number" && typeof value.installation_advanced === "boolean") {
     return {
       state: "accepted",
-      revision_number: value.revision_number,
+      version_number: value.version_number,
       installation_advanced: value.installation_advanced
     };
   }
@@ -48138,10 +48137,10 @@ async function answerEnvelope(client, options) {
     const result = await submitAnswer(client, questionId, choice, scope.connectedFolder);
     const sayLines = [`Question ${result.question_id} is now ${result.status}.`];
     if (result.result?.state === "accepted") {
-      sayLines.push(`Revision ${result.result.revision_number} is live.`);
+      sayLines.push(`Version ${result.result.version_number} is live.`);
       if (!result.result.installation_advanced) {
         sayLines.push(
-          `Your copy is behind revision ${result.result.revision_number}; run update --all.`
+          `Your copy is behind version ${result.result.version_number}; run update --all.`
         );
       }
     } else if (result.result?.state === "pending") {

@@ -1,6 +1,6 @@
 {
   "name": "mica",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Personalization layer for shared agent skills: snapshot local edits, update from the trunk, and contribute changes back to the owner.",
   "author": {
     "name": "Mica"
