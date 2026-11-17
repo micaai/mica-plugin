@@ -1,7 +1,7 @@
 {
   "name": "mica",
-  "version": "0.3.0",
-  "description": "Find, read, and save your Mica skills in Claude through the Mica connector.",
+  "version": "0.4.0",
+  "description": "Find, read, save, and change your Mica skills in Claude through the Mica connector.",
   "author": {
     "name": "Mica"
   }

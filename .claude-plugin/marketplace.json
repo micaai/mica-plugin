@@ -8,7 +8,7 @@
     {
       "name": "mica",
       "source": "./plugins/mica",
-      "description": "Find, read, and save your Mica skills in Claude through the Mica connector."
+      "description": "Find, read, save, and change your Mica skills in Claude through the Mica connector."
     }
   ]
 }
