@@ -1,7 +1,7 @@
 {
   "name": "mica",
-  "version": "0.2.1",
-  "description": "Personalization layer for shared agent skills: snapshot local edits, update from the trunk, and contribute changes back to the owner.",
+  "version": "0.3.0",
+  "description": "Find, read, and save your Mica skills in Claude through the Mica connector.",
   "author": {
     "name": "Mica"
   }

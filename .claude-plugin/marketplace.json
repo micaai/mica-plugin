@@ -8,7 +8,7 @@
     {
       "name": "mica",
       "source": "./plugins/mica",
-      "description": "Personalization layer for shared agent skills: snapshot local edits, update from the trunk, and contribute changes back to the owner."
+      "description": "Find, read, and save your Mica skills in Claude through the Mica connector."
     }
   ]
 }
