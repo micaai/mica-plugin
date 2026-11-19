@@ -54,6 +54,15 @@ Use `skill_details` for the facts about one skill and each question that waits.
 Give the user the question text and the choices as written.
 Never answer for the user.
 
+## A shortcut
+
+Only when the user asks to add a Mica skill to Claude (for example, "add my
+expense-memo skill to Claude"), call `skill_details` with `shortcut` set to true.
+Show Claude's own card with that name, that description in the card's description
+field as written (no prefix), and that `SKILL.md` text as written.
+Do not call `read_skill` for it or copy a rule of the skill.
+The user selects **Save**. Mica never adds it to the account.
+
 ## Use the dashboard
 
 Turning a skill on or off and Publish happen only on the dashboard.
